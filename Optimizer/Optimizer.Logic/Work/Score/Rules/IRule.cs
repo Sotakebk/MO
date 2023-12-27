@@ -6,6 +6,4 @@ internal interface IRule
     /// Should NEVER mutate solution
     /// </summary>
     bool PassesRule(AvailableAction action, PartialSolution solution);
-
-    bool PassesRule(PartialSolution solution);
 }

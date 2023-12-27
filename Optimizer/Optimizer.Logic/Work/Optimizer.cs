@@ -173,7 +173,7 @@ internal class Optimizer
                     decimal sum = 0;
                     foreach (var heuristic in _heuristics)
                     {
-                        sum += heuristic.CalculateScore(action, solution);
+                        sum += heuristic.CalculateScore(solution);
                     }
 
                     copy.Score = sum;
