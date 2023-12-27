@@ -42,9 +42,8 @@ internal class Optimizer
 
         var root = new Level();
         root.Depth = 0;
-        root.CurrentScore = 0;
-        root.LastPickedActionId = -1;
-        root.AvailableActions = CollectAvailableActions(CleanPartialSolution);
+        root.LastPickedFollowingState = -1;
+        root.FollowingStates = CollectPossibleNextStates(CleanPartialSolution);
 
         levels.Push(root);
 
@@ -59,16 +58,13 @@ internal class Optimizer
             var level = levels.Peek();
             _state.CurrentDepth = level.Depth;
 
-            level.LastPickedActionId++;
-            if (level.LastPickedActionId < level.AvailableActions.Length)
+            level.LastPickedFollowingState++;
+            if (level.LastPickedFollowingState < level.FollowingStates.Length)
             {
                 // let's go deeper
-                var action = level.AvailableActions[level.LastPickedActionId];
+                var newState = level.FollowingStates[level.LastPickedFollowingState];
 
-                var newPartialSolution = level.CurrentPartialSolution.CreateDeepCopy();
-                action.Apply(newPartialSolution);
-
-                if (CheckIfFinishedSolutionAndSaveIfBetter(newPartialSolution))
+                if (CheckIfFinishedSolutionAndSaveIfBetter(newState))
                 {
                     // don't collect actions, this schedule is complete
                     // try next action of this level or go back
@@ -77,11 +73,10 @@ internal class Optimizer
 
                 var newLevel = new Level()
                 {
-                    AvailableActions = CollectAvailableActions(newPartialSolution),
-                    CurrentPartialSolution = newPartialSolution,
-                    CurrentScore = action.Score,
+                    FollowingStates = CollectPossibleNextStates(newState),
+                    CurrentPartialSolution = newState,
                     Depth = level.Depth + 1,
-                    LastPickedActionId = -1
+                    LastPickedFollowingState = -1
                 };
                 levels.Push(newLevel);
             }
@@ -148,16 +143,16 @@ internal class Optimizer
         return true;
     }
 
-    private AvailableAction[] CollectAvailableActions(PartialSolution solution)
+    private PartialSolution[] CollectPossibleNextStates(PartialSolution solution)
     {
-        var bag = new ConcurrentBag<AvailableAction>();
+        var bag = new ConcurrentBag<PartialSolution>();
         foreach (var (id, assignment) in SolutionWalkingHelper.EnumerableAssignments(solution))
         {
             if (assignment.IsAllSet)
                 continue;
 
             void CalculateSumAndAddIfPassesRules(
-                ConcurrentBag<AvailableAction> _bag,
+                ConcurrentBag<PartialSolution> _bag,
                 AvailableAction action)
             {
                 var passes = true;
@@ -172,9 +167,17 @@ internal class Optimizer
 
                 if (passes)
                 {
-                    var score = PeekActionScore(action, solution);
-                    action.Score = score;
-                    _bag.Add(action);
+                    var copy = solution.CreateDeepCopy();
+                    action.Apply(copy);
+
+                    decimal sum = 0;
+                    foreach (var heuristic in _heuristics)
+                    {
+                        sum += heuristic.CalculateScore(action, solution);
+                    }
+
+                    copy.Score = sum;
+                    _bag.Add(copy);
                 }
             }
 
@@ -201,17 +204,6 @@ internal class Optimizer
         }
 
         return bag.OrderByDescending(a => a.Score).ToArray();
-    }
-
-    private decimal PeekActionScore(AvailableAction action, PartialSolution solution)
-    {
-        decimal sum = 0;
-        foreach (var heuristic in _heuristics)
-        {
-            sum += heuristic.CalculateScore(action, solution);
-        }
-
-        return sum;
     }
 
     private static PartialSolution BuildCleanPartialSolution(Input input)
@@ -255,8 +247,7 @@ internal class Optimizer
     {
         public int Depth;
         public PartialSolution CurrentPartialSolution;
-        public decimal CurrentScore;
-        public AvailableAction[] AvailableActions;
-        public int LastPickedActionId = -1;
+        public PartialSolution[] FollowingStates = Array.Empty<PartialSolution>();
+        public int LastPickedFollowingState = -1;
     }
 }

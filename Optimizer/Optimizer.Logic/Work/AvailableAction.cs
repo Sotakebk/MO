@@ -28,7 +28,7 @@ internal struct AvailableAction
     public AvailableAction(int supervisorId, int reviewerId, AssignmentIndex assignmentId)
     {
         Type = AvailableActionType.SetSupervisorAndReviewer;
-        Data = (short)((reviewerId & 0xFF) | (supervisorId & 0xFF) << 8);
+        Data = (short)((reviewerId & 0xFF) | ((supervisorId & 0xFF) << 8));
         AssignmentId = assignmentId;
         Score = 0;
     }

@@ -6,11 +6,13 @@ internal struct PartialSolution
 {
     public Day[] Days;
     public Dictionary<(byte supervisorId, byte reviewerId), int> SupervisorAndReviewerIdToAssignmentsLeft;
+    public decimal Score;
 
     public PartialSolution()
     {
         Days = Array.Empty<Day>();
         SupervisorAndReviewerIdToAssignmentsLeft = new Dictionary<(byte supervisorId, byte reviewerId), int>();
+        Score = 0;
     }
 
     public readonly PartialSolution CreateDeepCopy()
