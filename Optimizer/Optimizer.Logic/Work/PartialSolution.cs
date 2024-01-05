@@ -91,7 +91,7 @@ internal struct Assignment
     public void SetSupervisorAndReviewer(byte supervisorId, byte reviewerId)
     {
 #if DEBUG
-        if ((_valueFlags & 0b01) != 0)
+        if (IsSupervisorAndReviewerSet)
         {
             throw new Exception("Supervisor and reviewer overwrite was attempted, something is wrong!");
         }
@@ -104,7 +104,7 @@ internal struct Assignment
     public void SetChairPerson(byte chairPersonId)
     {
 #if DEBUG
-        if ((_valueFlags & 0b10) != 0)
+        if (IsChairPersonSet)
         {
             throw new Exception("ChairPerson overwrite was attempted, something is wrong!");
         }
