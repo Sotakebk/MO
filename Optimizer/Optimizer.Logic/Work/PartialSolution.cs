@@ -112,4 +112,9 @@ internal struct Assignment
         _chairPersonId = chairPersonId;
         _valueFlags |= 0b10;
     }
+
+    public void UnsetChairPerson(){
+        _chairPersonId = 0;
+        _valueFlags &= 0b01;
+    }
 }

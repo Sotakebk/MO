@@ -10,6 +10,7 @@ internal class Optimizer
     private readonly ILogger<Optimizer> _logger;
     private readonly Input _input;
     private readonly OptimizationState _state;
+    private readonly Stack<Level> _levels;
     private readonly IRule[] _rules;
     private readonly IHeuristic[] _heuristics;
     public PartialSolution CleanPartialSolution;
@@ -22,6 +23,8 @@ internal class Optimizer
         CleanPartialSolution = BuildCleanPartialSolution(input);
         _rules = rules;
         _heuristics = heuristics;
+        var expectedDepth = _input.Combinations.Sum(c => c.TotalCount);
+        _levels = new Stack<Level>(expectedDepth);
     }
 
     private bool StopIfCancelled()
@@ -37,25 +40,23 @@ internal class Optimizer
     {
         _state.IsWorking = true;
 
-        var expectedDepth = _input.Combinations.Sum(c => c.TotalCount);
-        var levels = new Stack<Level>(expectedDepth);
 
         var root = new Level();
         root.Depth = 0;
         root.LastPickedFollowingState = -1;
         root.FollowingStates = CollectPossibleNextStates(CleanPartialSolution);
 
-        levels.Push(root);
+        _levels.Push(root);
 
         while (!StopIfCancelled())
         {
             _state.OperationsDone++;
-            if (levels.Count <= 0)
+            if (_levels.Count <= 0)
             {
                 break;
             }
 
-            var level = levels.Peek();
+            var level = _levels.Peek();
             _state.CurrentDepth = level.Depth;
 
             level.LastPickedFollowingState++;
@@ -78,13 +79,16 @@ internal class Optimizer
                     Depth = level.Depth + 1,
                     LastPickedFollowingState = -1
                 };
-                levels.Push(newLevel);
+                _levels.Push(newLevel);
             }
             else
             {
                 // we have to go back
-                levels.Pop();
+                _levels.Pop();
             }
+            #if DEBUG
+            // _logger.LogTrace(string.Join("->", _levels.Select(l=>$"({l.LastPickedFollowingState}/{l.FollowingStates.Length})")));
+            #endif
         }
 
         _state.IsWorking = false;
@@ -92,8 +96,35 @@ internal class Optimizer
 
     private bool CheckIfFinishedSolutionAndSaveIfBetter(PartialSolution solution)
     {
-        if (solution.SupervisorAndReviewerIdToAssignmentsLeft.Any(s => s.Value > 0))
+        if (solution.SupervisorAndReviewerIdToAssignmentsLeft.Any(s => s.Value > 0) 
+            || solution.Days.AsParallel().Any(
+                d=>d.Blocks.Any(
+                    b=>b.Assignments.Any(
+                        a=> a.IsSupervisorAndReviewerSet && !a.IsChairPersonSet
+                        )
+                    )
+                )
+            ) // check if all assignments are complete
             return false;
+
+        // remove chairpersons where assigned, but missing supervisor and reviewer
+
+        solution.Days.AsParallel().ForAll(
+            d =>
+            {
+                for(int b = 0; b < d.Blocks.Length; b++){
+                    var block = d.Blocks[b];
+                    for(int a = 0; a < block.Assignments.Length; a++){
+                        var assignment = block.Assignments[a];
+                        if(assignment.IsChairPersonSet && !assignment.IsSupervisorAndReviewerSet)
+                        {
+                            assignment.UnsetChairPerson();
+                            block.Assignments[a] = assignment; 
+                        }
+                    }
+                }
+            }
+        );
 
         decimal score = 0;
         foreach (var heuristic in _heuristics)
@@ -136,7 +167,7 @@ internal class Optimizer
                     }
                 }
             }
-            _logger.LogInformation("Found better solution score: {Score}", score);
+
             _state.Result = s;
         }
 
@@ -146,46 +177,47 @@ internal class Optimizer
     private PartialSolution[] CollectPossibleNextStates(PartialSolution solution)
     {
         var bag = new ConcurrentBag<PartialSolution>();
-        foreach (var (id, assignment) in SolutionWalkingHelper.EnumerableAssignments(solution))
+
+        void CalculateSumAndAddIfPassesRules(ConcurrentBag<PartialSolution> _bag, AvailableAction action)
         {
-            if (assignment.IsAllSet)
-                continue;
-
-            void CalculateSumAndAddIfPassesRules(
-                ConcurrentBag<PartialSolution> _bag,
-                AvailableAction action)
+            var passes = true;
+            foreach (var rule in _rules)
             {
-                var passes = true;
-                foreach (var rule in _rules)
+                if (!rule.PassesRule(action, solution))
                 {
-                    if (!rule.PassesRule(action, solution))
-                    {
-                        passes = false;
-                        break;
-                    }
-                }
-
-                if (passes)
-                {
-                    var copy = solution.CreateDeepCopy();
-                    action.Apply(copy);
-
-                    decimal sum = 0;
-                    foreach (var heuristic in _heuristics)
-                    {
-                        sum += heuristic.CalculateScore(solution);
-                    }
-
-                    copy.Score = sum;
-                    _bag.Add(copy);
+                    passes = false;
+                    break;
                 }
             }
+
+            if (passes)
+            {
+                var copy = solution.CreateDeepCopy();
+                action.Apply(copy);
+
+                decimal sum = 0;
+                foreach (var heuristic in _heuristics)
+                {
+                    sum += heuristic.CalculateScore(solution);
+                }
+
+                copy.Score = sum;
+                _bag.Add(copy);
+            }
+        }
+
+        var assignments = SolutionWalkingHelper.EnumerableAssignments(solution).Where(pair => !pair.Item2.IsAllSet);
+
+        Parallel.ForEach(assignments, (value, state, index) => {
+            var (assignmentIndex, assignment) = value;
+            if (assignment.IsAllSet)
+                return;
 
             if (!assignment.IsChairPersonSet)
             {
                 foreach (var person in _input.ChairPersonIds)
                 {
-                    var action = new AvailableAction(person, id);
+                    var action = new AvailableAction(person, assignmentIndex);
                     CalculateSumAndAddIfPassesRules(bag, action);
                 }
             }
@@ -197,11 +229,12 @@ internal class Optimizer
                     if (keyValuePair.Value <= 0)
                         continue;
 
-                    var action = new AvailableAction(keyValuePair.Key.supervisorId, keyValuePair.Key.reviewerId, id);
+                    var action = new AvailableAction(keyValuePair.Key.supervisorId, keyValuePair.Key.reviewerId, assignmentIndex);
                     CalculateSumAndAddIfPassesRules(bag, action);
                 }
             }
-        }
+
+        });
 
         return bag.OrderByDescending(a => a.Score).ToArray();
     }

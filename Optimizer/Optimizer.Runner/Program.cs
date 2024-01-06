@@ -16,7 +16,11 @@ var records1 = csv1.GetRecords<Assignments>();
 var records2 = csv2.GetRecords<ChairPerson>();
 
 
-using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+using var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.AddConsole();
+    builder.SetMinimumLevel(LogLevel.Trace);
+});
 var logger = loggerFactory.CreateLogger<Program>();
 logger.LogInformation("START OF THIS MASTERPIECE");
 
@@ -61,7 +65,7 @@ var state = root.Optimize(input, ct.Token);
 
 
 var operationsLimit = 10000000;
-var timeLimit = TimeSpan.FromSeconds(20);
+var timeLimit = TimeSpan.FromSeconds(60);
 
 
 var timeStart = DateTime.Now;
@@ -84,7 +88,12 @@ if (state.Task?.Exception != null)
 
 
 if (state.Result.HasValue)
-    Console.WriteLine(JsonSerializer.Serialize(state.Result.Value));
+{
+    await using var writer = new StreamWriter("result.json");
+    await writer.WriteAsync(JsonSerializer.Serialize(state.Result.Value));
+    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.json"));
+}
+
 
 public class Assignments
 {
