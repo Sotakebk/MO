@@ -8,9 +8,6 @@ public static class DictionaryExtensions
         if (key is null)
             throw new ArgumentException(nameof(key));
 
-        if (addValue is null)
-            throw new ArgumentException(nameof(addValue));
-
         if (updateValueFactory is null)
             throw new ArgumentException(nameof(updateValueFactory));
 

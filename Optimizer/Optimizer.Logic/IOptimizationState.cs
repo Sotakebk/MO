@@ -7,4 +7,5 @@ public interface IOptimizationState
     CancellationToken CancellationToken { get; }
     int CurrentDepth { get; }
     int OperationsDone { get; }
+    Task? Task { get; }
 }

@@ -10,8 +10,12 @@ class CalculatePersonPenalty : IHeuristic
     public decimal CalculateScore(PartialSolution solution)
     {
         // TODO: Add penalty for more than N subsequent assignments
+        // TODO: Add penalty for using only one chairperson (srednai wystapien danego chairpersona powinna byc podobna)
+        // TODO: Żeby obrony zaczynały się od rana (czyli mozna liczyc ile jest dziury rano mają mniejsze penalty, niż dziury wieczorem), użycie kolejnego dnia obron powinno być również penalty
+
         var personLastAppearance = new Dictionary<int, int?>();
         var penalty = new decimal(0.0);
+        var maxSubsequentAssignments = 3;
 
         foreach (var day in solution.Days)
         {

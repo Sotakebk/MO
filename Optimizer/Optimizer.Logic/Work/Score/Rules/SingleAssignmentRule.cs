@@ -59,23 +59,9 @@ class SingleAssignmentRule : IRule
                     if (assignment.SupervisorId == action.ChairPersonId) // try to assign chairperson which is supervisor in other block in same time
                         return false;
                 }
-
-                if (assignment.IsChairPersonSet)
-                {
-                    if (assignment.ChairPersonId == action.ChairPersonId) // try to assign chairperson which is chairperson in other block in same time
-                        return false;
-                }
             }
             else if (action.Type == AvailableActionType.SetSupervisorAndReviewer)
             {
-                if (assignment.IsSupervisorAndReviewerSet)
-                {
-                    if (assignment.ReviewerId == action.ReviewerId) // try to assign reviewer which is reviewer in other block in same time
-                        return false;
-
-                    if (assignment.SupervisorId == action.SupervisorId) // try to assign supervisor which is supervisor in other block in same time
-                        return false;
-                }
 
                 if (assignment.IsChairPersonSet)
                 {
@@ -88,6 +74,6 @@ class SingleAssignmentRule : IRule
             }
         }
 
-        return false;
+        return true;
     }
 }

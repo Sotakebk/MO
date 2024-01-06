@@ -6,9 +6,9 @@ namespace Optimizer.Logic;
 
 public class Root
 {
-    private LoggerFactory _loggerFactory;
+    private ILoggerFactory _loggerFactory;
 
-    public Root(LoggerFactory loggerFactory)
+    public Root(ILoggerFactory loggerFactory)
     {
         _loggerFactory = loggerFactory;
     }
@@ -16,11 +16,19 @@ public class Root
     public IOptimizationState Optimize(Input input, CancellationToken? cancellationToken)
     {
         var state = new OptimizationState(cancellationToken);
-        var optimizer = new Work.Optimizer(_loggerFactory, input, state, new IRule[] { }, new IHeuristic[] { });
+        var optimizer = new Work.Optimizer(_loggerFactory, input, state, new IRule[]
+        {
+            new SingleAssignmentRule()
+        }, new IHeuristic[]
+        {
+            new CalculatePersonPenalty()
+        });
 
         ValidateInput(input);
 
-        Task.Factory.StartNew(() => optimizer.Optimize(), state.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        var task = Task.Factory.StartNew(() => optimizer.Optimize(), state.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+        state.Task = task;
 
         return state;
     }

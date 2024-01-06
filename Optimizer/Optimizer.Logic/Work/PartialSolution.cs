@@ -61,7 +61,7 @@ internal struct Block
         b.BlockId = BlockId;
         b.Offset = Offset;
         b.Assignments = new Assignment[Assignments.Length];
-        Buffer.BlockCopy(Assignments, 0, b.Assignments, 0, Assignments.Length * Assignment.SizeInBytes);
+        Array.Copy(Assignments, b.Assignments, Assignments.Length);
         return b;
     }
 }

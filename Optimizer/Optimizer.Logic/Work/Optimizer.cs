@@ -14,7 +14,7 @@ internal class Optimizer
     private readonly IHeuristic[] _heuristics;
     public PartialSolution CleanPartialSolution;
 
-    public Optimizer(LoggerFactory loggerFactory, Input input, OptimizationState state, IRule[] rules, IHeuristic[] heuristics)
+    public Optimizer(ILoggerFactory loggerFactory, Input input, OptimizationState state, IRule[] rules, IHeuristic[] heuristics)
     {
         _logger = loggerFactory.CreateLogger<Optimizer>();
         _input = input;
@@ -124,7 +124,7 @@ internal class Optimizer
                     vbs[j].RoomId = b.BlockId;
                     vbs[j].Assignments = new SolutionAssignment[b.Assignments.Length];
 
-                    var assignments = vbs[j].Assignments;
+                    var assignments = b.Assignments;
                     for (var k = 0; k < b.Assignments.Length; k++)
                     {
                         vbs[j].Assignments[k] = new SolutionAssignment()
@@ -136,7 +136,7 @@ internal class Optimizer
                     }
                 }
             }
-
+            _logger.LogInformation("Found better solution score: {Score}", score);
             _state.Result = s;
         }
 
