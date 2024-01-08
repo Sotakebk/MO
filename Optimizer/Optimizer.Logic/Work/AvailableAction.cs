@@ -1,4 +1,6 @@
-﻿namespace Optimizer.Logic.Work;
+﻿using Optimizer.Logic.Extensions;
+
+namespace Optimizer.Logic.Work;
 
 public enum AvailableActionType : byte
 {
@@ -37,14 +39,15 @@ internal struct AvailableAction
     {
         if (Type == AvailableActionType.SetChairPerson)
         {
-            solution.Days[AssignmentId.Day].Blocks[AssignmentId.Block].Assignments[AssignmentId.Assignment]
+            solution.Days[AssignmentId.Day].Classrooms[AssignmentId.Classroom].Assignments[AssignmentId.Assignment]
                 .SetChairPerson(ChairPersonId);
+            solution.ChairPersonAppearanceCount.AddOrUpdate(ChairPersonId, 1, c => c++);
         }
         else
         {
             var count = solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)];
             solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)] = count - 1;
-            solution.Days[AssignmentId.Day].Blocks[AssignmentId.Block].Assignments[AssignmentId.Assignment]
+            solution.Days[AssignmentId.Day].Classrooms[AssignmentId.Classroom].Assignments[AssignmentId.Assignment]
                 .SetSupervisorAndReviewer(SupervisorId, ReviewerId);
         }
     }

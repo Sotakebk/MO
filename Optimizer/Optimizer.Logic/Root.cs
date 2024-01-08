@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Optimizer.Logic.Work.Score.Heuristics;
 using Optimizer.Logic.Work.Score.Rules;
 
@@ -21,7 +21,7 @@ public class Root
             new SingleAssignmentRule()
         }, new IHeuristic[]
         {
-            new CalculatePersonPenalty()
+            new GeneralPeopleHeuristic()
         });
 
         ValidateInput(input);

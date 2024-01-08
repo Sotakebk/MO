@@ -6,14 +6,14 @@ namespace Optimizer.Logic.Work;
 internal struct AssignmentIndex
 {
     [FieldOffset(0)] public byte Day = 0;
-    [FieldOffset(1)] public byte Block = 0;
+    [FieldOffset(1)] public byte Classroom = 0;
     [FieldOffset(2)] public byte Assignment = 0;
     [FieldOffset(3)] private byte _allignment = 0; // waste of space
 
-    public AssignmentIndex(byte day, byte block, byte assignment)
+    public AssignmentIndex(byte day, byte classroom, byte assignment)
     {
         Day = day;
-        Block = block;
+        Classroom = classroom;
         Assignment = assignment;
     }
 }

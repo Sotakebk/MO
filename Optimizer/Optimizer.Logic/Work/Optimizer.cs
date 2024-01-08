@@ -20,7 +20,7 @@ internal class Optimizer
         _logger = loggerFactory.CreateLogger<Optimizer>();
         _input = input;
         _state = state;
-        CleanPartialSolution = BuildCleanPartialSolution(input);
+        CleanPartialSolution = new PartialSolution(input);
         _rules = rules;
         _heuristics = heuristics;
         var expectedDepth = _input.Combinations.Sum(c => c.TotalCount);
@@ -98,7 +98,7 @@ internal class Optimizer
     {
         if (solution.SupervisorAndReviewerIdToAssignmentsLeft.Any(s => s.Value > 0) 
             || solution.Days.AsParallel().Any(
-                d=>d.Blocks.Any(
+                d=>d.Classrooms.Any(
                     b=>b.Assignments.Any(
                         a=> a.IsSupervisorAndReviewerSet && !a.IsChairPersonSet
                         )
@@ -112,14 +112,14 @@ internal class Optimizer
         solution.Days.AsParallel().ForAll(
             d =>
             {
-                for(int b = 0; b < d.Blocks.Length; b++){
-                    var block = d.Blocks[b];
-                    for(int a = 0; a < block.Assignments.Length; a++){
-                        var assignment = block.Assignments[a];
+                for(int b = 0; b < d.Classrooms.Length; b++){
+                    var classroom = d.Classrooms[b];
+                    for(int a = 0; a < classroom.Assignments.Length; a++){
+                        var assignment = classroom.Assignments[a];
                         if(assignment.IsChairPersonSet && !assignment.IsSupervisorAndReviewerSet)
                         {
                             assignment.UnsetChairPerson();
-                            block.Assignments[a] = assignment; 
+                            classroom.Assignments[a] = assignment; 
                         }
                     }
                 }
@@ -145,25 +145,25 @@ internal class Optimizer
             {
                 var d = solution.Days[i];
                 s.Days[i].DayId = d.DayId;
-                s.Days[i].VacantBlocks = new SolutionBlock[d.Blocks.Length];
-                var vbs = s.Days[i].VacantBlocks;
+                s.Days[i].Classrooms = new SolutionClassroom[d.Classrooms.Length];
+                var vbs = s.Days[i].Classrooms;
 
-                for (var j = 0; j < d.Blocks.Length; j++)
+                for (var j = 0; j < d.Classrooms.Length; j++)
                 {
-                    var b = d.Blocks[j];
-                    vbs[j].Offset = b.Offset;
-                    vbs[j].RoomId = b.BlockId;
-                    vbs[j].Assignments = new SolutionAssignment[b.Assignments.Length];
+                    var b = d.Classrooms[j];
+                    vbs[j].RoomId = b.RoomId;
+                    vbs[j].Assignments = new SolutionAssignment?[b.Assignments.Length];
 
                     var assignments = b.Assignments;
                     for (var k = 0; k < b.Assignments.Length; k++)
                     {
-                        vbs[j].Assignments[k] = new SolutionAssignment()
-                        {
-                            ChairPersonId = assignments[k].ChairPersonId,
-                            ReviewerId = assignments[k].ReviewerId,
-                            SupervisorId = assignments[k].SupervisorId,
-                        };
+                        if (assignments[k].IsAllSet)
+                            vbs[j].Assignments[k] = new SolutionAssignment()
+                            {
+                                ChairPersonId = assignments[k].ChairPersonId,
+                                ReviewerId = assignments[k].ReviewerId,
+                                SupervisorId = assignments[k].SupervisorId,
+                            };
                     }
                 }
             }
@@ -239,42 +239,6 @@ internal class Optimizer
         return bag.OrderByDescending(a => a.Score).ToArray();
     }
 
-    private static PartialSolution BuildCleanPartialSolution(Input input)
-    {
-        var partialSolution = new PartialSolution();
-        partialSolution.Days = new Day[input.Days.Length];
-        for (var i = 0; i < input.Days.Length; i++)
-        {
-            var od = input.Days[i];
-            partialSolution.Days[i] = new Day()
-            {
-                DayId = od.Id,
-                Blocks = new Block[od.VacantBlocks.Length]
-            };
-
-            for (var j = 0; j < od.VacantBlocks.Length; j++)
-            {
-                var ovb = od.VacantBlocks[j];
-                partialSolution.Days[i].Blocks[j] = new Block()
-                {
-                    BlockId = ovb.RoomId,
-                    Offset = ovb.Offset,
-                    Assignments = new Assignment[ovb.SlotCount]
-                };
-            }
-        }
-
-        var dict = new Dictionary<(byte, byte), int>();
-
-        foreach (var pair in input.Combinations)
-        {
-            dict.Add(((byte)pair.PromoterId, (byte)pair.ReviewerId), pair.TotalCount);
-        }
-
-        partialSolution.SupervisorAndReviewerIdToAssignmentsLeft = dict;
-
-        return partialSolution;
-    }
 
     internal class Level
     {

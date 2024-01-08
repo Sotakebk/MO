@@ -1,6 +1,7 @@
-﻿// See https://aka.ms/new-console-template for more information
+// See https://aka.ms/new-console-template for more information
 
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
@@ -42,21 +43,26 @@ Input input = new Input()
     {
         new InputDay()
         {
-            Id = 1, VacantBlocks = new[]
+            Id = 1,
+            Classrooms = new[]
             {
-                new InputVacantBlock() { Offset = 0, RoomId = 1, SlotCount = 18 },
-                new InputVacantBlock() { Offset = 0, RoomId = 2, SlotCount = 18 }
-            }
+                new InputClassroom() { RoomId = 1 },
+                new InputClassroom() { RoomId = 2 }
+            },
+            SlotCount = 18
         },
         new InputDay()
         {
-            Id = 2, VacantBlocks = new[]
+            Id = 2,
+            Classrooms = new[]
             {
-                new InputVacantBlock() { Offset = 0, RoomId = 1, SlotCount = 18 },
-                new InputVacantBlock() { Offset = 0, RoomId = 2, SlotCount = 18 }
-            }
+                new InputClassroom() { RoomId = 1 },
+                new InputClassroom() { RoomId = 2 }
+            },
+            SlotCount = 18
         },
-    }
+    },
+    ForbiddenSlots = Array.Empty<(int, int, int)>()
 };
 
 var ct = new CancellationTokenSource();
@@ -75,7 +81,7 @@ logger.LogInformation($"Start: operationsLimit:{operationsLimit}, timeLimit: {ti
 
 while (state.IsWorking && state.OperationsDone < operationsLimit && DateTime.Now < timeStart.Add(timeLimit))
 {
-    logger.LogInformation($"IT: operations: {state.OperationsDone}, score:{state.Result?.Score}, depth:{state.CurrentDepth}");
+    logger.LogInformation($"IT: operations: {state.OperationsDone:D10}, score:{state.Result?.Score:F5}, depth:{state.CurrentDepth}");
     await Task.Delay(TimeSpan.FromSeconds(1));
 }
 
@@ -89,11 +95,50 @@ if (state.Task?.Exception != null)
 
 if (state.Result.HasValue)
 {
-    await using var writer = new StreamWriter("result.json");
-    await writer.WriteAsync(JsonSerializer.Serialize(state.Result.Value));
+    var sb = new StringBuilder();
+    foreach(var day in state.Result.Value.Days)
+    {
+        sb.AppendLine($"=== Day {day.DayId} ===");
+        foreach (var classroom in day.Classrooms)
+        {
+            sb.AppendLine($"== Classroom {classroom.RoomId} ==");
+            foreach (var assignment in classroom.Assignments)
+                sb.AppendLine(assignment.ToString());
+        }
+        sb.AppendLine("");
+    }
+
+    logger.LogInformation(sb.ToString());
+
+    await using var writer = new StreamWriter("result.txt");
+    await writer.WriteAsync(sb.ToString()); //JsonSerializer.Serialize(state.Result.Value)
     logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.json"));
+
+    //await using var writerCsv = new StreamWriter("result.json");
+    //state.Result.Value.Days.Select(d => d.Classrooms.Select(c => c.Assignments.Select(a => (a.Value.ReviewerId, a.Value.SupervisorId, a.Value.ChairPersonId)))).ToList();
+
+    var records = new List<CsvRow>
+    {
+        new CsvRow { DayId = 0, ClassroomId= 0, ChairPersonId=0, ReviewerId=0, SupervisorId=0 },
+    };
+
+    using (var writerCsv = new StreamWriter(Path.Join(Directory.GetCurrentDirectory(), "result.csv")))
+    using (var csv = new CsvWriter(writerCsv, CultureInfo.InvariantCulture))
+    {
+        csv.WriteRecords(records);
+    }
+
 }
 
+
+public class CsvRow
+{
+    public int DayId{ get; set; }
+    public int ClassroomId{ get; set; }
+    public int? ChairPersonId { get; set; }
+    public int? SupervisorId { get; set; }
+    public int? ReviewerId { get; set; }
+}
 
 public class Assignments
 {

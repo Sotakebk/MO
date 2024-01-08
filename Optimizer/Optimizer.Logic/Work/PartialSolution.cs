@@ -2,16 +2,40 @@
 
 namespace Optimizer.Logic.Work;
 
-internal struct PartialSolution
+public struct PartialSolution
 {
     public Day[] Days;
     public Dictionary<(byte supervisorId, byte reviewerId), int> SupervisorAndReviewerIdToAssignmentsLeft;
+    public Dictionary<byte, int> ChairPersonAppearanceCount;
     public decimal Score;
 
     public PartialSolution()
     {
         Days = Array.Empty<Day>();
-        SupervisorAndReviewerIdToAssignmentsLeft = new Dictionary<(byte supervisorId, byte reviewerId), int>();
+        SupervisorAndReviewerIdToAssignmentsLeft = new();
+        ChairPersonAppearanceCount = new();
+        Score = 0;
+    }
+
+    public PartialSolution(Input input)
+    {
+        Days = new Day[input.Days.Length];
+        for (var i = 0; i < input.Days.Length; i++)
+        {
+            Days[i] = new Day(input.Days[i]);
+        }
+
+        SupervisorAndReviewerIdToAssignmentsLeft = new Dictionary<(byte, byte), int>();
+
+        foreach (var pair in input.Combinations)
+        {
+            SupervisorAndReviewerIdToAssignmentsLeft[((byte)pair.PromoterId, (byte)pair.ReviewerId)] = pair.TotalCount;
+        }
+        ChairPersonAppearanceCount = new();
+        foreach(var chairPerson in input.ChairPersonIds)
+        {
+            ChairPersonAppearanceCount[(byte)chairPerson] = 0;
+        }
         Score = 0;
     }
 
@@ -29,37 +53,54 @@ internal struct PartialSolution
     }
 }
 
-internal struct Day
+public struct Day
 {
     public int DayId;
-    public Block[] Blocks;
+    public Classroom[] Classrooms;
+    public int SlotCount;
+
+    public Day(InputDay inputDay)
+    {
+        DayId = inputDay.Id;
+        SlotCount = inputDay.SlotCount;
+        Classrooms = new Classroom[inputDay.Classrooms.Length];
+        for (var i = 0; i < Classrooms.Length; i++)
+        {
+            Classrooms[i] = new Classroom(inputDay.Classrooms[i], SlotCount);
+        }
+    }
 
     public readonly Day CreateDeepCopy()
     {
         var d = new Day();
         d.DayId = DayId;
-        var b = Blocks;
-        d.Blocks = new Block[b.Length];
-        for (var i = 0; i < Blocks.Length; i++)
+        d.SlotCount = SlotCount;
+        var b = Classrooms;
+        d.Classrooms = new Classroom[b.Length];
+        for (var i = 0; i < Classrooms.Length; i++)
         {
-            d.Blocks[i] = b[i].CreateDeepCopy();
+            d.Classrooms[i] = b[i].CreateDeepCopy();
 
         }
         return d;
     }
 }
 
-internal struct Block
+public struct Classroom
 {
-    public int BlockId;
-    public int Offset;
+    public int RoomId;
     public Assignment[] Assignments;
 
-    public readonly Block CreateDeepCopy()
+    public Classroom(InputClassroom inputClassroom, int slotCount)
     {
-        var b = new Block();
-        b.BlockId = BlockId;
-        b.Offset = Offset;
+        RoomId = inputClassroom.RoomId;
+        Assignments = new Assignment[slotCount];
+    }
+
+    public readonly Classroom CreateDeepCopy()
+    {
+        var b = new Classroom();
+        b.RoomId = RoomId;
         b.Assignments = new Assignment[Assignments.Length];
         Array.Copy(Assignments, b.Assignments, Assignments.Length);
         return b;
@@ -67,7 +108,7 @@ internal struct Block
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 4)]
-internal struct Assignment
+public struct Assignment
 {
     public const int SizeInBytes = 4;
 

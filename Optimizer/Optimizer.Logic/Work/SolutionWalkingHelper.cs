@@ -7,12 +7,12 @@ internal static class SolutionWalkingHelper
         for (var d = 0; d < solution.Days.Length; d++)
         {
             var day = solution.Days[d];
-            for (var b = 0; b < day.Blocks.Length; b++)
+            for (var b = 0; b < day.Classrooms.Length; b++)
             {
-                var block = day.Blocks[b];
-                for (var s = 0; s < block.Assignments.Length; s++)
+                var classroom = day.Classrooms[b];
+                for (var s = 0; s < classroom.Assignments.Length; s++)
                 {
-                    yield return (new AssignmentIndex((byte)d, (byte)b, (byte)s), block.Assignments[s]);
+                    yield return (new AssignmentIndex((byte)d, (byte)b, (byte)s), classroom.Assignments[s]);
                 }
             }
         }
