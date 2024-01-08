@@ -4,8 +4,8 @@ public class GeneralPeopleHeuristic : IHeuristic
 {
     public const int MinPerfectAssignmentsPerDayCount = 6;
     public const int MaxPerfectAssignmentsPerDayCount = 10;
-    public const int AcceptableMaxAssignmentsInBlockPerDay = 6;
-    public const int AcceptableMaxAssignmentSpreadPerDay = 14;
+    public const int AcceptableMaxAssignmentsInBlockPerDay = 9;
+    public const int AcceptableMaxAssignmentSpreadPerDay = 10;
 
     decimal IHeuristic.CalculateScore(PartialSolution solution)
     {
@@ -105,7 +105,7 @@ public class GeneralPeopleHeuristic : IHeuristic
                         {
                             var memory = GetPersonMemory(personId);
                             memory.TotalAssignments++;
-                            memory.Days[dIndex].FirstAssignment = memory.Days[dIndex].FirstAssignment ?? aIndex;
+                            memory.Days[dIndex].FirstAssignment ??= aIndex;
                             memory.Days[dIndex].LastAssignment = aIndex;
                             if(memory.Days[dIndex].AssignmentBlocks.Count == 0)
                             {
@@ -155,7 +155,7 @@ public class GeneralPeopleHeuristic : IHeuristic
                         if(assignment.IsAllSet)
                         {
                             _daysMemory[dIndex].TotalAssignmentsFilled++;
-                            _daysMemory[dIndex].FirstAssignment = _daysMemory[dIndex].FirstAssignment ?? aIndex;
+                            _daysMemory[dIndex].FirstAssignment ??= aIndex;
                             _daysMemory[dIndex].LastAssignment = aIndex;
                         }
                     }
@@ -177,10 +177,12 @@ public class GeneralPeopleHeuristic : IHeuristic
                     if (day.FirstAssignment == null || day.LastAssignment == null)
                     {
                         // prize for empty day multiplied by slot count
-                        sum += 1.0m * _solution.Days[dayIndex].SlotCount;
+                        sum += 1.0m; // * _solution.Days[dayIndex].SlotCount;
                         continue;
                     }
 
+                    // penaly for evening starting
+                    sum -= day.FirstAssignment.Value;
 
                     var assignmentSpread = day.LastAssignment.Value - day.FirstAssignment.Value;
                     var assignmentsTotal = day.TotalAssignments; 

@@ -71,7 +71,7 @@ var state = root.Optimize(input, ct.Token);
 
 
 var operationsLimit = 10000000;
-var timeLimit = TimeSpan.FromSeconds(60);
+var timeLimit = TimeSpan.FromSeconds(30);
 
 
 var timeStart = DateTime.Now;
@@ -108,10 +108,11 @@ if (state.Result.HasValue)
         sb.AppendLine("");
     }
 
-    logger.LogInformation(sb.ToString());
+    var res = sb.ToString();
+    logger.LogInformation(res);
 
     await using var writer = new StreamWriter("result.txt");
-    await writer.WriteAsync(sb.ToString()); //JsonSerializer.Serialize(state.Result.Value)
+    await writer.WriteAsync(res); //JsonSerializer.Serialize(state.Result.Value)
     logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.json"));
 
     //await using var writerCsv = new StreamWriter("result.json");
