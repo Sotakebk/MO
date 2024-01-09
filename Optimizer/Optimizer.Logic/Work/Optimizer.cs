@@ -1,28 +1,23 @@
-﻿using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
-using Optimizer.Logic.Work.Score.Heuristics;
-using Optimizer.Logic.Work.Score.Rules;
+﻿using Microsoft.Extensions.Logging;
+using Optimizer.Logic.Work.Heuristics;
+using Optimizer.Logic.Work.Rules;
 
 namespace Optimizer.Logic.Work;
 
-internal class Optimizer
+internal sealed class Optimizer
 {
-    private readonly ILogger<Optimizer> _logger;
+    private readonly ILogger _logger;
     private readonly Input _input;
     private readonly OptimizationState _state;
     private readonly Stack<Level> _levels;
-    private readonly IRule[] _rules;
-    private readonly IHeuristic[] _heuristics;
-    public PartialSolution CleanPartialSolution;
+    private readonly PartialSolution CleanPartialSolution;
 
-    public Optimizer(ILoggerFactory loggerFactory, Input input, OptimizationState state, IRule[] rules, IHeuristic[] heuristics)
+    public Optimizer(ILoggerFactory loggerFactory, Input input, OptimizationState state)
     {
-        _logger = loggerFactory.CreateLogger<Optimizer>();
+        _logger = loggerFactory.CreateLogger(GetType().Name);
         _input = input;
         _state = state;
         CleanPartialSolution = new PartialSolution(input);
-        _rules = rules;
-        _heuristics = heuristics;
         var expectedDepth = _input.Combinations.Sum(c => c.TotalCount);
         _levels = new Stack<Level>(expectedDepth);
     }
@@ -43,7 +38,8 @@ internal class Optimizer
         var root = new Level();
         root.Depth = 0;
         root.LastPickedFollowingState = -1;
-        root.FollowingStates = CollectPossibleNextStates(CleanPartialSolution);
+        root.FollowingActions = CollectPossibleNextActions(CleanPartialSolution);
+        root.CurrentPartialSolution = CleanPartialSolution;
 
         _levels.Push(root);
 
@@ -59,13 +55,16 @@ internal class Optimizer
             _state.CurrentDepth = level.Depth;
 
             level.LastPickedFollowingState++;
-            if (level.LastPickedFollowingState < level.FollowingStates.Length)
+            if (level.LastPickedFollowingState < level.FollowingActions.Length)
             {
                 // let's go deeper
-                var newState = level.FollowingStates[level.LastPickedFollowingState];
+                var action = level.FollowingActions[level.LastPickedFollowingState];
+                var state = level.CurrentPartialSolution.CreateDeepCopy();
+                action.Apply(ref state);
 
-                if (CheckIfFinishedSolutionAndSaveIfBetter(newState))
+                if (CheckIfFinishedSolution(ref state))
                 {
+                    SaveIfBetter(ref state);
                     // don't collect actions, this schedule is complete
                     // try next action of this level or go back
                     continue;
@@ -73,8 +72,8 @@ internal class Optimizer
 
                 var newLevel = new Level()
                 {
-                    FollowingStates = CollectPossibleNextStates(newState),
-                    CurrentPartialSolution = newState,
+                    FollowingActions = CollectPossibleNextActions(state),
+                    CurrentPartialSolution = state,
                     Depth = level.Depth + 1,
                     LastPickedFollowingState = -1
                 };
@@ -85,100 +84,100 @@ internal class Optimizer
                 // we have to go back
                 _levels.Pop();
             }
-#if DEBUG
-            // _logger.LogTrace(string.Join("->", _levels.Select(l=>$"({l.LastPickedFollowingState}/{l.FollowingStates.Length})")));
-#endif
         }
 
         _state.IsWorking = false;
     }
 
-    private bool CheckIfFinishedSolutionAndSaveIfBetter(PartialSolution solution)
+    private bool CheckIfFinishedSolution(ref PartialSolution solution)
     {
         if (solution.SupervisorAndReviewerIdToAssignmentsLeft.Any(pair => pair.Value > 0))
             return false;
 
-        float score = 0;
-        foreach (var heuristic in _heuristics)
-        {
-            score += heuristic.CalculateScore(solution);
-        }
-
-        if (score > (_state.Result?.Score ?? float.MinValue))
-        {
-            var s = new Solution()
-            {
-                Score = score
-            };
-
-            s.Days = new SolutionDay[solution.Days.Length];
-
-            for (var i = 0; i < s.Days.Length; i++)
-            {
-                var d = solution.Days[i];
-                s.Days[i].DayId = d.DayId;
-                s.Days[i].Classrooms = new SolutionClassroom[d.Classrooms.Length];
-                var vbs = s.Days[i].Classrooms;
-
-                for (var j = 0; j < d.Classrooms.Length; j++)
-                {
-                    var b = d.Classrooms[j];
-                    vbs[j].RoomId = b.RoomId;
-                    vbs[j].Assignments = new SolutionAssignment?[b.Assignments.Length];
-
-                    var assignments = b.Assignments;
-                    for (var k = 0; k < b.Assignments.Length; k++)
-                    {
-                        if (assignments[k].HasValuesSet())
-                            vbs[j].Assignments[k] = new SolutionAssignment()
-                            {
-                                ChairPersonId = assignments[k].ChairPersonId,
-                                ReviewerId = assignments[k].ReviewerId,
-                                SupervisorId = assignments[k].SupervisorId,
-                            };
-                    }
-                }
-            }
-
-            _state.Result = s;
-        }
-
         return true;
     }
 
-    private PartialSolution[] CollectPossibleNextStates(PartialSolution solution)
+    private void SaveIfBetter(ref PartialSolution solution)
     {
-        var bag = new ConcurrentBag<PartialSolution>();
-
-        void CalculateSumAndAddIfPassesRules(ConcurrentBag<PartialSolution> _bag, AvailableAction action)
+        if (solution.Score > (_state.Result?.Score ?? float.MinValue))
         {
-            var passes = true;
-            foreach (var rule in _rules)
+            _state.Result = CreateSolutionFromPartialSolution(solution);
+        }
+    }
+
+    private static float GetScoreForSolution(ref PartialSolution solution)
+    {
+        return GeneralPeopleHeuristic.CalculateScore(solution);
+    }
+
+    private static bool PassesAllRules(AvailableAction action, ref PartialSolution solution)
+    {
+        return SingleAssignmentRule.PassesRule(action, solution);
+    }
+
+    private static Solution CreateSolutionFromPartialSolution(PartialSolution partialSolution)
+    {
+        var s = new Solution()
+        {
+            Score = partialSolution.Score
+        };
+
+        s.Days = new SolutionDay[partialSolution.Days.Length];
+
+        for (var i = 0; i < s.Days.Length; i++)
+        {
+            var partialSolutionDay = partialSolution.Days[i];
+            s.Days[i].DayId = partialSolutionDay.DayId;
+            s.Days[i].Classrooms = new SolutionClassroom[partialSolutionDay.Classrooms.Length];
+            var vbs = s.Days[i].Classrooms;
+
+            for (var j = 0; j < partialSolutionDay.Classrooms.Length; j++)
             {
-                if (!rule.PassesRule(action, solution))
+                var partialSolutionClassroom = partialSolutionDay.Classrooms[j];
+                vbs[j].RoomId = partialSolutionClassroom.RoomId;
+                vbs[j].Assignments = new SolutionAssignment?[partialSolutionClassroom.Assignments.Length];
+
+                var assignments = partialSolutionClassroom.Assignments;
+                for (var k = 0; k < partialSolutionClassroom.Assignments.Length; k++)
                 {
-                    passes = false;
-                    break;
+                    if (assignments[k].HasValuesSet())
+                        vbs[j].Assignments[k] = new SolutionAssignment()
+                        {
+                            ChairPersonId = assignments[k].ChairPersonId,
+                            ReviewerId = assignments[k].ReviewerId,
+                            SupervisorId = assignments[k].SupervisorId,
+                        };
                 }
-            }
-
-            if (passes)
-            {
-                var copy = solution.CreateDeepCopy();
-                action.Apply(copy);
-
-                float sum = 0;
-                foreach (var heuristic in _heuristics)
-                {
-                    sum += heuristic.CalculateScore(solution);
-                }
-
-                copy.Score = sum;
-                _bag.Add(copy);
             }
         }
 
-        var assignments = SolutionWalkingHelper.EnumerableAssignments(solution).Where(pair => !pair.assignment.HasValuesSet());
+        return s;
+    }
+
+    private void CalculateSumAndAddIfPassesRules(List<AvailableAction> list, AvailableAction action,
+        PartialSolution solution)
+    {
+        if (!PassesAllRules(action, ref solution))
+            return;
+
+        var copy = solution.CreateDeepCopy();
+        action.Apply(ref copy);
+        if (CheckIfFinishedSolution(ref copy))
+        {
+        }
+        action.Score = GetScoreForSolution(ref copy);
+        lock (list) // bad idea, shrug
+        {
+            list.Add(action);
+        }
+    }
+
+    private AvailableAction[] CollectPossibleNextActions(PartialSolution solution)
+    {
+        var list = new List<AvailableAction>();
+
+        var assignments = SolutionWalkingHelper.EnumerableAssignments(solution)
+            .Where(pair => !pair.assignment.HasValuesSet());
 
         Parallel.ForEach(assignments, (value, state, index) =>
         {
@@ -202,19 +201,30 @@ internal class Optimizer
                         (byte)chairPerson,
                         assignmentIndex);
 
-                    CalculateSumAndAddIfPassesRules(bag, action);
+                    CalculateSumAndAddIfPassesRules(list, action, solution);
                 }
             }
         });
 
-        return bag.OrderByDescending(a => a.Score).ToArray();
-    }
+        // make sure it's ordered right, and each run is the same
+        var value = list.OrderByDescending(a => a.Score)
+            .ThenBy(a => a.ChairPersonId)
+            .ThenBy(a => a.ReviewerId)
+            .ThenBy(a => a.SupervisorId)
+            .ThenBy(a => a.AssignmentId.Index)
+            .ToArray();
 
-    internal class Level
-    {
-        public int Depth;
-        public PartialSolution CurrentPartialSolution;
-        public PartialSolution[] FollowingStates = Array.Empty<PartialSolution>();
-        public int LastPickedFollowingState = -1;
+        if (value.Length == 0)
+            _state.DeadEnds++;
+
+        return value;
     }
+}
+
+internal class Level
+{
+    public int Depth;
+    public PartialSolution CurrentPartialSolution;
+    public AvailableAction[] FollowingActions = Array.Empty<AvailableAction>();
+    public int LastPickedFollowingState = -1;
 }

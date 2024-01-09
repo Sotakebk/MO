@@ -1,30 +1,29 @@
 using Microsoft.Extensions.Logging;
-using Optimizer.Logic.Work.Score.Heuristics;
-using Optimizer.Logic.Work.Score.Rules;
 
 namespace Optimizer.Logic;
 
+public enum OptimizerType
+{
+    Simple,
+    Deep
+}
+
 public class Root
 {
-    private ILoggerFactory _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     public Root(ILoggerFactory loggerFactory)
     {
         _loggerFactory = loggerFactory;
     }
 
-    public IOptimizationState Optimize(Input input, CancellationToken? cancellationToken)
+    public IOptimizationState Optimize(Input input, CancellationToken? cancellationToken, OptimizerType optimizerType)
     {
         var state = new OptimizationState(cancellationToken);
-        var optimizer = new Work.Optimizer(_loggerFactory, input, state, new IRule[]
-        {
-            new SingleAssignmentRule()
-        }, new IHeuristic[]
-        {
-            new GeneralPeopleHeuristic()
-        });
 
         ValidateInput(input);
+
+        var optimizer = new Work.Optimizer(_loggerFactory, input, state);
 
         var task = Task.Factory.StartNew(() => optimizer.Optimize(), state.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 

@@ -1,13 +1,13 @@
-﻿namespace Optimizer.Logic.Work.Score.Heuristics;
+﻿namespace Optimizer.Logic.Work.Heuristics;
 
-public class GeneralPeopleHeuristic : IHeuristic
+internal static class GeneralPeopleHeuristic
 {
     public const int MinPerfectAssignmentsPerDayCount = 6;
     public const int MaxPerfectAssignmentsPerDayCount = 10;
     public const int AcceptableMaxAssignmentsInBlockPerDay = 9;
     public const int AcceptableMaxAssignmentSpreadPerDay = 10;
 
-    float IHeuristic.CalculateScore(PartialSolution solution)
+    internal static float CalculateScore(PartialSolution solution)
     {
         var operation = new Operation(solution);
         operation.Work();
@@ -30,14 +30,14 @@ public class GeneralPeopleHeuristic : IHeuristic
         {
             public int? FirstAssignment;
             public int? LastAssignment;
-            public List<PersonAssignmentBlock> AssignmentBlocks;
+            public readonly List<PersonAssignmentBlock> AssignmentBlocks;
             public int TotalAssignments;
 
             public PersonPerDayMemory()
             {
                 FirstAssignment = null;
                 LastAssignment = null;
-                AssignmentBlocks = new();
+                AssignmentBlocks = new List<PersonAssignmentBlock>();
                 TotalAssignments = 0;
             }
         }
@@ -46,9 +46,11 @@ public class GeneralPeopleHeuristic : IHeuristic
         {
             public readonly PersonPerDayMemory[] Days;
             public int TotalAssignments;
+            public readonly bool Exists;
 
             public PersonMemory(int days)
             {
+                Exists = true;
                 TotalAssignments = 0;
                 Days = new PersonPerDayMemory[days];
                 for (int i = 0; i < days; i++)
@@ -63,34 +65,27 @@ public class GeneralPeopleHeuristic : IHeuristic
             public int TotalAssignmentsFilled;
         }
 
-        private readonly Dictionary<int, PersonMemory> _peopleMemory;
+        private readonly PersonMemory[] _peopleMemory;
         private readonly DayMemory[] _daysMemory;
-        private readonly int _daysInPartialSolution;
         private readonly PartialSolution _solution;
 
         public Operation(PartialSolution solution)
         {
-            _peopleMemory = new();
-            _daysInPartialSolution = solution.Days.Length;
-            _daysMemory = new DayMemory[_daysInPartialSolution];
+            _peopleMemory = new PersonMemory[byte.MaxValue+1];
+            var daysInPartialSolution = solution.Days.Length;
+            _daysMemory = new DayMemory[daysInPartialSolution];
+            
+            for (var i = 0; i < solution.PeopleIds.Count; i++)
+            {
+                _peopleMemory[solution.PeopleIds[i]] = new PersonMemory(daysInPartialSolution);
+            }
+
             _solution = solution;
         }
-
-        private PersonMemory GetPersonMemory(int index)
-        {
-            if (_peopleMemory.TryGetValue(index, out var value))
-                return value;
-            return new PersonMemory(_daysInPartialSolution);
-        }
-
-        private void SavePersonMemory(int index, PersonMemory memory)
-        {
-            _peopleMemory[index] = memory;
-        }
-
+        
         public void Work()
         {
-            for(int dIndex = 0; dIndex < _solution.Days.Length; dIndex++)
+            for (var dIndex = 0; dIndex < _solution.Days.Length; dIndex++)
             {
                 var solutionDay = _solution.Days[dIndex];
                 for (var aIndex = 0; aIndex < solutionDay.SlotCount; aIndex++)
@@ -103,11 +98,11 @@ public class GeneralPeopleHeuristic : IHeuristic
 
                         void WorkForPerson(int personId)
                         {
-                            var memory = GetPersonMemory(personId);
-                            memory.TotalAssignments++;
+                            var memory = _peopleMemory[personId];
+                            _peopleMemory[personId].TotalAssignments++;
                             memory.Days[dIndex].FirstAssignment ??= aIndex;
                             memory.Days[dIndex].LastAssignment = aIndex;
-                            if(memory.Days[dIndex].AssignmentBlocks.Count == 0)
+                            if (memory.Days[dIndex].AssignmentBlocks.Count == 0)
                             {
                                 memory.Days[dIndex].AssignmentBlocks.Add(new PersonAssignmentBlock()
                                 {
@@ -120,7 +115,7 @@ public class GeneralPeopleHeuristic : IHeuristic
                             {
                                 var lastBlockIndex = memory.Days[dIndex].AssignmentBlocks.Count - 1;
                                 var lastAssignmentBlock = memory.Days[dIndex].AssignmentBlocks[lastBlockIndex];
-                                if(lastAssignmentBlock.EndIndex == aIndex - 1
+                                if (lastAssignmentBlock.EndIndex == aIndex - 1
                                     && lastAssignmentBlock.ClassroomIndex == cIndex)
                                 {
                                     // if block is continous, continue
@@ -139,7 +134,6 @@ public class GeneralPeopleHeuristic : IHeuristic
                                 }
                                 memory.Days[dIndex].TotalAssignments++;
                             }
-                            SavePersonMemory(personId, memory);
                         }
 
                         if (assignment.HasValuesSet())
@@ -160,8 +154,12 @@ public class GeneralPeopleHeuristic : IHeuristic
         {
             var sum = 0f;
 
-            foreach (var (_, person) in _peopleMemory)
+            for(var _i = 0; _i <= byte.MaxValue; _i++)
             {
+                var person = _peopleMemory[_i];
+                if (!person.Exists)
+                    continue;
+
                 for (var dayIndex = 0; dayIndex < person.Days.Length; dayIndex++)
                 {
                     var day = person.Days[dayIndex];
@@ -178,7 +176,7 @@ public class GeneralPeopleHeuristic : IHeuristic
                     sum -= day.FirstAssignment.Value;
 
                     var assignmentSpread = day.LastAssignment.Value - day.FirstAssignment.Value;
-                    var assignmentsTotal = day.TotalAssignments; 
+                    var assignmentsTotal = day.TotalAssignments;
                     // min(min(0, x-a), min(0, b-x)), b > a
                     // penalty for having assignments away from a perfect range
                     // having one assignment in a day makes no sense
@@ -192,12 +190,12 @@ public class GeneralPeopleHeuristic : IHeuristic
                     // limit how far those may be by giving negative points for the value being too big
                     sum += Math.Min(0, AcceptableMaxAssignmentSpreadPerDay - assignmentSpread);
 
-                    for(int i = 0; i < day.AssignmentBlocks.Count; i++)
+                    for (int i = 0; i < day.AssignmentBlocks.Count; i++)
                     {
                         var assignmentBlock = day.AssignmentBlocks[i];
-                        var assignmentsInBlock = (assignmentBlock.EndIndex - assignmentBlock.StartIndex) + 1;
+                        var assignmentsInBlock = assignmentBlock.EndIndex - assignmentBlock.StartIndex + 1;
                         // penalty for block being too large
-                        sum += Math.Min(0, AcceptableMaxAssignmentsInBlockPerDay - assignmentSpread);
+                        sum += Math.Min(0, AcceptableMaxAssignmentsInBlockPerDay - assignmentsInBlock);
 
                         if (i < day.AssignmentBlocks.Count - 1)
                         {

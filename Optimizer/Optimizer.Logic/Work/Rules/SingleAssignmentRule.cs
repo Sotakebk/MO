@@ -1,8 +1,8 @@
-namespace Optimizer.Logic.Work.Score.Rules;
+namespace Optimizer.Logic.Work.Rules;
 
-internal class SingleAssignmentRule : IRule
+internal static class SingleAssignmentRule
 {
-    public bool PassesRule(AvailableAction action, PartialSolution solution)
+    internal static bool PassesRule(AvailableAction action, PartialSolution solution)
     {
         var day = solution.Days[action.AssignmentId.Day];
 

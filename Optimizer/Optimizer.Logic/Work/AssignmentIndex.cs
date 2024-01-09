@@ -11,6 +11,8 @@ internal struct AssignmentIndex
     [FieldOffset(1)] public byte Classroom = 0;
     [FieldOffset(2)] public byte Assignment = 0;
 
+    public int Index => Day << 16 | Classroom << 8 | Assignment;
+
     public AssignmentIndex(byte day, byte classroom, byte assignment)
     {
         Day = day;

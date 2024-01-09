@@ -20,7 +20,7 @@ internal struct AvailableAction
 
     [FieldOffset(AssignmentIndex.StructureSize + 3)]
     public float Score;
-
+    
     public AvailableAction(byte supervisorId, byte reviewerId, byte chairPersonId, AssignmentIndex assignmentId)
     {
         ChairPersonId = chairPersonId;
@@ -30,7 +30,7 @@ internal struct AvailableAction
         Score = 0;
     }
 
-    public readonly void Apply(PartialSolution solution)
+    public readonly void Apply(ref PartialSolution solution)
     {
         var assignments = solution.Days[AssignmentId.Day].Classrooms[AssignmentId.Classroom].Assignments;
 
@@ -40,5 +40,13 @@ internal struct AvailableAction
 
         var count = solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)];
         solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)] = count - 1;
+
+        solution.Score = Score;
+        solution.CurrentDepth++;
+    }
+
+    public readonly override string ToString()
+    {
+        return $"Action: score:{Score}";
     }
 }

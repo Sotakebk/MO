@@ -7,14 +7,16 @@ public struct PartialSolution
     public Day[] Days;
     public Dictionary<(byte supervisorId, byte reviewerId), int> SupervisorAndReviewerIdToAssignmentsLeft;
     public Dictionary<byte, int> ChairPersonAppearanceCount;
-    public float Score;
+    public IReadOnlyList<byte> PeopleIds = Array.Empty<byte>();
+    public int CurrentDepth = 0;
+    public int MaxDepth = 0;
+    public float Score = 0;
 
     public PartialSolution()
     {
         Days = Array.Empty<Day>();
         SupervisorAndReviewerIdToAssignmentsLeft = new();
         ChairPersonAppearanceCount = new();
-        Score = 0;
     }
 
     public PartialSolution(Input input)
@@ -32,10 +34,18 @@ public struct PartialSolution
             SupervisorAndReviewerIdToAssignmentsLeft[((byte)pair.PromoterId, (byte)pair.ReviewerId)] = pair.TotalCount;
         }
         ChairPersonAppearanceCount = new();
-        foreach(var chairPerson in input.ChairPersonIds)
+        foreach (var chairPerson in input.ChairPersonIds)
         {
             ChairPersonAppearanceCount[(byte)chairPerson] = 0;
         }
+
+        MaxDepth = input.Combinations.Select(c => c.TotalCount).Sum();
+        PeopleIds = input.Combinations.Select(c => c.ReviewerId)
+            .Union(input.Combinations.Select(c => c.PromoterId))
+            .Union(input.ChairPersonIds.Select(c=>c))
+            .OrderBy(i=>i)
+            .Select(i=>(byte)i)
+            .ToArray();
         Score = 0;
     }
 
@@ -49,6 +59,11 @@ public struct PartialSolution
         }
 
         ps.SupervisorAndReviewerIdToAssignmentsLeft = new Dictionary<(byte supervisorId, byte reviewerId), int>(SupervisorAndReviewerIdToAssignmentsLeft);
+        ps.ChairPersonAppearanceCount = new Dictionary<byte, int>(ChairPersonAppearanceCount);
+        ps.MaxDepth = MaxDepth;
+        ps.CurrentDepth = CurrentDepth;
+        ps.Score = Score;
+        ps.PeopleIds = PeopleIds;
         return ps;
     }
 }
@@ -117,9 +132,9 @@ public struct Assignment
     [FieldOffset(2)] private byte _reviewerId = 0;
     [FieldOffset(3)] private byte _flag = 0;
 
-    public byte ChairPersonId => _chairPersonId;
-    public byte SupervisorId => _supervisorId;
-    public byte ReviewerId => _reviewerId;
+    public readonly byte ChairPersonId => _chairPersonId;
+    public readonly byte SupervisorId => _supervisorId;
+    public readonly byte ReviewerId => _reviewerId;
 
     public Assignment()
     {

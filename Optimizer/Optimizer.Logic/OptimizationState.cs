@@ -29,6 +29,7 @@ internal class OptimizationState : IOptimizationState
     public CancellationToken CancellationToken { get; set; }
     public int CurrentDepth { get; set; }
     public int OperationsDone { get; set; }
+    public int DeadEnds { get; set; }
     public Task? Task { get; set; }
 
     public OptimizationState(CancellationToken? cancellationToken)

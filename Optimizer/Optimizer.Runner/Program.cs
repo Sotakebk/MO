@@ -2,7 +2,6 @@
 
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Optimizer.Logic;
@@ -67,7 +66,7 @@ Input input = new Input()
 
 var ct = new CancellationTokenSource();
 
-var state = root.Optimize(input, ct.Token);
+var state = root.Optimize(input, ct.Token, OptimizerType.Simple);
 
 
 var operationsLimit = 10000000;
@@ -81,13 +80,13 @@ logger.LogInformation($"Start: operationsLimit:{operationsLimit}, timeLimit: {ti
 
 while (state.IsWorking && state.OperationsDone < operationsLimit && DateTime.Now < timeStart.Add(timeLimit))
 {
-    logger.LogInformation($"IT: operations: {state.OperationsDone:D10}, score:{state.Result?.Score:F5}, depth:{state.CurrentDepth}");
+    logger.LogInformation($"IT: operations: {state.OperationsDone:D10}, dead-ends: {state.DeadEnds}, score:{state.Result?.Score:F5}, depth:{state.CurrentDepth}");
     await Task.Delay(TimeSpan.FromSeconds(1));
 }
 
 ct.Cancel();
 
-logger.LogInformation($"DONE: Iter: {state.OperationsDone}, Score: {state.Result?.Score}, Depth: {state.CurrentDepth}, IN: {DateTime.Now.Subtract(timeStart).TotalSeconds}s");
+logger.LogInformation($"DONE: Iterations: {state.OperationsDone}, Score: {state.Result?.Score}, Depth: {state.CurrentDepth}, IN: {DateTime.Now.Subtract(timeStart).TotalSeconds}s");
 
 if (state.Task?.Exception != null)
     logger.LogError(state.Task?.Exception, "Optimize error");
@@ -117,10 +116,10 @@ if (state.Result.HasValue)
 
     //await using var writerCsv = new StreamWriter("result.json");
     //state.Result.Value.Days.Select(d => d.Classrooms.Select(c => c.Assignments.Select(a => (a.Value.ReviewerId, a.Value.SupervisorId, a.Value.ChairPersonId)))).ToList();
-
+    /*
     var records = new List<CsvRow>
     {
-        new CsvRow { DayId = 0, ClassroomId= 0, ChairPersonId=0, ReviewerId=0, SupervisorId=0 },
+        new() { DayId = 0, ClassroomId= 0, ChairPersonId=0, ReviewerId=0, SupervisorId=0 },
     };
 
     using (var writerCsv = new StreamWriter(Path.Join(Directory.GetCurrentDirectory(), "result.csv")))
@@ -128,7 +127,7 @@ if (state.Result.HasValue)
     {
         csv.WriteRecords(records);
     }
-
+    */
 }
 
 
