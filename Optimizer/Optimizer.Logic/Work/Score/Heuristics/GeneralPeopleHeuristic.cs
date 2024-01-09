@@ -7,7 +7,7 @@ public class GeneralPeopleHeuristic : IHeuristic
     public const int AcceptableMaxAssignmentsInBlockPerDay = 9;
     public const int AcceptableMaxAssignmentSpreadPerDay = 10;
 
-    decimal IHeuristic.CalculateScore(PartialSolution solution)
+    float IHeuristic.CalculateScore(PartialSolution solution)
     {
         var operation = new Operation(solution);
         operation.Work();
@@ -37,7 +37,7 @@ public class GeneralPeopleHeuristic : IHeuristic
             {
                 FirstAssignment = null;
                 LastAssignment = null;
-                AssignmentBlocks = new(2);
+                AssignmentBlocks = new();
                 TotalAssignments = 0;
             }
         }
@@ -142,18 +142,11 @@ public class GeneralPeopleHeuristic : IHeuristic
                             SavePersonMemory(personId, memory);
                         }
 
-                        if (assignment.IsSupervisorAndReviewerSet)
+                        if (assignment.HasValuesSet())
                         {
                             WorkForPerson(assignment.SupervisorId);
                             WorkForPerson(assignment.ReviewerId);
-                        }
-                        if (assignment.IsChairPersonSet)
-                        {
                             WorkForPerson(assignment.ChairPersonId);
-                        }
-
-                        if(assignment.IsAllSet)
-                        {
                             _daysMemory[dIndex].TotalAssignmentsFilled++;
                             _daysMemory[dIndex].FirstAssignment ??= aIndex;
                             _daysMemory[dIndex].LastAssignment = aIndex;
@@ -163,9 +156,9 @@ public class GeneralPeopleHeuristic : IHeuristic
             }
         }
 
-        public decimal CalculateScore()
+        public float CalculateScore()
         {
-            decimal sum = 0m;
+            var sum = 0f;
 
             foreach (var (_, person) in _peopleMemory)
             {
@@ -177,7 +170,7 @@ public class GeneralPeopleHeuristic : IHeuristic
                     if (day.FirstAssignment == null || day.LastAssignment == null)
                     {
                         // prize for empty day multiplied by slot count
-                        sum += 1.0m; // * _solution.Days[dayIndex].SlotCount;
+                        sum += 1.0f; // * _solution.Days[dayIndex].SlotCount;
                         continue;
                     }
 

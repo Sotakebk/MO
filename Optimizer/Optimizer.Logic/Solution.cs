@@ -2,7 +2,7 @@ namespace Optimizer.Logic;
 
 public struct Solution
 {
-    public decimal Score { get; set; }
+    public float Score { get; set; }
     public SolutionDay[] Days { get; set; }
 }
 

@@ -2,5 +2,5 @@
 
 public interface IHeuristic
 {
-    decimal CalculateScore(PartialSolution solution);
+    float CalculateScore(PartialSolution solution);
 }

@@ -1,54 +1,44 @@
-﻿using Optimizer.Logic.Extensions;
+﻿using System.Runtime.InteropServices;
+using Optimizer.Logic.Extensions;
 
 namespace Optimizer.Logic.Work;
 
-public enum AvailableActionType : byte
-{
-    SetChairPerson,
-    SetSupervisorAndReviewer
-}
-
+[StructLayout(LayoutKind.Explicit, Size = AssignmentIndex.StructureSize + 3 * sizeof(byte) + sizeof(float))]
 internal struct AvailableAction
 {
-    public AvailableActionType Type;
+    [FieldOffset(0)]
     public AssignmentIndex AssignmentId;
-    public short Data;
-    public decimal Score;
 
-    public byte ChairPersonId => (byte)Data;
-    public byte SupervisorId => (byte)(Data >> 8);
-    public byte ReviewerId => (byte)(Data & 0xFF);
+    [FieldOffset(AssignmentIndex.StructureSize)]
+    public byte ChairPersonId;
 
-    public AvailableAction(int chairPersonId, AssignmentIndex assignmentId)
+    [FieldOffset(AssignmentIndex.StructureSize + 1)]
+    public byte SupervisorId;
+
+    [FieldOffset(AssignmentIndex.StructureSize + 2)]
+    public byte ReviewerId;
+
+    [FieldOffset(AssignmentIndex.StructureSize + 3)]
+    public float Score;
+
+    public AvailableAction(byte supervisorId, byte reviewerId, byte chairPersonId, AssignmentIndex assignmentId)
     {
-        Type = AvailableActionType.SetChairPerson;
-        Data = (short)chairPersonId;
+        ChairPersonId = chairPersonId;
+        SupervisorId = supervisorId;
+        ReviewerId = reviewerId;
         AssignmentId = assignmentId;
         Score = 0;
     }
 
-    public AvailableAction(int supervisorId, int reviewerId, AssignmentIndex assignmentId)
+    public readonly void Apply(PartialSolution solution)
     {
-        Type = AvailableActionType.SetSupervisorAndReviewer;
-        Data = (short)((reviewerId & 0xFF) | ((supervisorId & 0xFF) << 8));
-        AssignmentId = assignmentId;
-        Score = 0;
-    }
+        var assignments = solution.Days[AssignmentId.Day].Classrooms[AssignmentId.Classroom].Assignments;
 
-    public void Apply(PartialSolution solution)
-    {
-        if (Type == AvailableActionType.SetChairPerson)
-        {
-            solution.Days[AssignmentId.Day].Classrooms[AssignmentId.Classroom].Assignments[AssignmentId.Assignment]
-                .SetChairPerson(ChairPersonId);
-            solution.ChairPersonAppearanceCount.AddOrUpdate(ChairPersonId, 1, c => c++);
-        }
-        else
-        {
-            var count = solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)];
-            solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)] = count - 1;
-            solution.Days[AssignmentId.Day].Classrooms[AssignmentId.Classroom].Assignments[AssignmentId.Assignment]
-                .SetSupervisorAndReviewer(SupervisorId, ReviewerId);
-        }
+        assignments[AssignmentId.Assignment].SetAssignment(SupervisorId, ReviewerId, ChairPersonId);
+
+        solution.ChairPersonAppearanceCount.AddOrUpdate(ChairPersonId, 1, c => c + 1);
+
+        var count = solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)];
+        solution.SupervisorAndReviewerIdToAssignmentsLeft[(SupervisorId, ReviewerId)] = count - 1;
     }
 }

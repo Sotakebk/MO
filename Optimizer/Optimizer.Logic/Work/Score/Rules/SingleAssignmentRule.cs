@@ -1,96 +1,33 @@
 namespace Optimizer.Logic.Work.Score.Rules;
 
-class SingleAssignmentRule : IRule
+internal class SingleAssignmentRule : IRule
 {
     public bool PassesRule(AvailableAction action, PartialSolution solution)
     {
-        if (!VerifySingleAssignmentInBlock(action, solution))
-            return false;
+        var day = solution.Days[action.AssignmentId.Day];
 
-        if (!VerifySingleAssignmentInTime(action, solution))
-            return false;
-
-        return true;
-    }
-
-    private static bool VerifySingleAssignmentInBlock(AvailableAction action, PartialSolution solution)
-    {
-        var assignment = solution
-            .Days[action.AssignmentId.Day]
-            .Classrooms[action.AssignmentId.Classroom]
-            .Assignments[action.AssignmentId.Assignment];
-
-        if (action.Type == AvailableActionType.SetChairPerson && assignment.IsChairPersonSet)
+        for (var i = 0; i < day.Classrooms.Length; i++)
         {
-            if (assignment.ReviewerId == action.ChairPersonId) // try to assign chairperson which is reviewer
-                return false;
-
-            if (assignment.SupervisorId == action.ChairPersonId) // try to assign chairperson which is supervisor
-                return false;
-        }
-        else if (action.Type == AvailableActionType.SetSupervisorAndReviewer && assignment.IsSupervisorAndReviewerSet)
-        {
-            if (assignment.ChairPersonId == action.ReviewerId) // try to assign ReviewerId which is chairperson
-                return false;
-
-            if (assignment.ChairPersonId == action.SupervisorId) // try to assign SupervisorId which is chairperson
+            var assignment = day.Classrooms[i].Assignments[action.AssignmentId.Assignment];
+            if (HasCollision(action, assignment))
                 return false;
         }
 
         return true;
     }
 
-    private static bool VerifySingleAssignmentInTime(AvailableAction action, PartialSolution solution)
+    private static bool HasCollision(AvailableAction action, Assignment assignment)
     {
-        foreach (var classroom in solution.Days[action.AssignmentId.Day].Classrooms)
-        {
-            var assignment = classroom.Assignments[action.AssignmentId.Assignment];
+        var a1 = action.SupervisorId;
+        var b1 = action.ChairPersonId;
+        var c1 = action.ReviewerId;
 
-            if (action.Type == AvailableActionType.SetChairPerson)
-            {
-                if (assignment.IsSupervisorAndReviewerSet)
-                {
-                    if (assignment.ReviewerId == action.ChairPersonId) // try to assign chairperson which is reviewer in other block in same time
-                        return false;
+        var a2 = assignment.SupervisorId;
+        var b2 = assignment.ChairPersonId;
+        var c2 = assignment.ReviewerId;
 
-                    if (assignment.SupervisorId == action.ChairPersonId) // try to assign chairperson which is supervisor in other block in same time
-                        return false;
-                }
-                if (assignment.IsChairPersonSet)
-                {
-                    if (assignment.ChairPersonId == action.ChairPersonId) // try to assign ChairPersonId which is chairperson in other block in same time
-                        return false;
-                }
-            }
-            else if (action.Type == AvailableActionType.SetSupervisorAndReviewer)
-            {
-
-                if (assignment.IsChairPersonSet)
-                {
-                    if (assignment.ChairPersonId == action.ReviewerId) // try to assign ReviewerId which is ChairPersonId in other block in same time
-                        return false;
-
-                    if (assignment.ChairPersonId == action.SupervisorId) // try to assign SupervisorId which is ChairPersonId in other block in same time
-                        return false;
-                }
-
-                if (assignment.IsSupervisorAndReviewerSet)
-                {
-                    if (assignment.ReviewerId == action.ReviewerId) // try to assign ReviewerId which is ReviewerId in other block in same time
-                        return false;
-
-                    if (assignment.ReviewerId == action.SupervisorId) // try to assign SupervisorId which is ReviewerId in other block in same time
-                        return false;
-
-                    if (assignment.SupervisorId == action.ReviewerId) // try to assign ReviewerId which is SupervisorId in other block in same time
-                        return false;
-
-                    if (assignment.SupervisorId == action.SupervisorId) // try to assign supervisor which is SupervisorId in other block in same time
-                        return false;
-                }
-            }
-        }
-
-        return true;
+        return a1 == a2 || a1 == b2 || a1 == c2
+               || b1 == a2 || b1 == b2 || b1 == c2
+               || c1 == a2 || c1 == b2 || c1 == c2;
     }
 }

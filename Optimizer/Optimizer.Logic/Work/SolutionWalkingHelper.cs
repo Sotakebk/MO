@@ -2,7 +2,7 @@
 
 internal static class SolutionWalkingHelper
 {
-    public static IEnumerable<(AssignmentIndex, Assignment)> EnumerableAssignments(PartialSolution solution)
+    public static IEnumerable<(AssignmentIndex index, Assignment assignment)> EnumerableAssignments(PartialSolution solution)
     {
         for (var d = 0; d < solution.Days.Length; d++)
         {

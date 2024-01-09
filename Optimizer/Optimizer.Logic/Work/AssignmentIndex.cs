@@ -2,13 +2,14 @@
 
 namespace Optimizer.Logic.Work;
 
-[StructLayout(LayoutKind.Explicit, Size = 4)]
+[StructLayout(LayoutKind.Explicit, Size = 3)]
 internal struct AssignmentIndex
 {
+    public const int StructureSize = 3;
+
     [FieldOffset(0)] public byte Day = 0;
     [FieldOffset(1)] public byte Classroom = 0;
     [FieldOffset(2)] public byte Assignment = 0;
-    [FieldOffset(3)] private byte _allignment = 0; // waste of space
 
     public AssignmentIndex(byte day, byte classroom, byte assignment)
     {

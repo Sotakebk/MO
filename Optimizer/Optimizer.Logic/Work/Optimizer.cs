@@ -40,7 +40,6 @@ internal class Optimizer
     {
         _state.IsWorking = true;
 
-
         var root = new Level();
         root.Depth = 0;
         root.LastPickedFollowingState = -1;
@@ -86,9 +85,9 @@ internal class Optimizer
                 // we have to go back
                 _levels.Pop();
             }
-            #if DEBUG
+#if DEBUG
             // _logger.LogTrace(string.Join("->", _levels.Select(l=>$"({l.LastPickedFollowingState}/{l.FollowingStates.Length})")));
-            #endif
+#endif
         }
 
         _state.IsWorking = false;
@@ -96,43 +95,16 @@ internal class Optimizer
 
     private bool CheckIfFinishedSolutionAndSaveIfBetter(PartialSolution solution)
     {
-        if (solution.SupervisorAndReviewerIdToAssignmentsLeft.Any(s => s.Value > 0) 
-            || solution.Days.AsParallel().Any(
-                d=>d.Classrooms.Any(
-                    b=>b.Assignments.Any(
-                        a=> a.IsSupervisorAndReviewerSet && !a.IsChairPersonSet
-                        )
-                    )
-                )
-            ) // check if all assignments are complete
+        if (solution.SupervisorAndReviewerIdToAssignmentsLeft.Any(pair => pair.Value > 0))
             return false;
 
-        // remove chairpersons where assigned, but missing supervisor and reviewer
-
-        solution.Days.AsParallel().ForAll(
-            d =>
-            {
-                for(int b = 0; b < d.Classrooms.Length; b++){
-                    var classroom = d.Classrooms[b];
-                    for(int a = 0; a < classroom.Assignments.Length; a++){
-                        var assignment = classroom.Assignments[a];
-                        if(assignment.IsChairPersonSet && !assignment.IsSupervisorAndReviewerSet)
-                        {
-                            assignment.UnsetChairPerson();
-                            classroom.Assignments[a] = assignment; 
-                        }
-                    }
-                }
-            }
-        );
-
-        decimal score = 0;
+        float score = 0;
         foreach (var heuristic in _heuristics)
         {
             score += heuristic.CalculateScore(solution);
         }
 
-        if (score > (_state.Result?.Score ?? decimal.MinValue))
+        if (score > (_state.Result?.Score ?? float.MinValue))
         {
             var s = new Solution()
             {
@@ -157,7 +129,7 @@ internal class Optimizer
                     var assignments = b.Assignments;
                     for (var k = 0; k < b.Assignments.Length; k++)
                     {
-                        if (assignments[k].IsAllSet)
+                        if (assignments[k].HasValuesSet())
                             vbs[j].Assignments[k] = new SolutionAssignment()
                             {
                                 ChairPersonId = assignments[k].ChairPersonId,
@@ -195,7 +167,7 @@ internal class Optimizer
                 var copy = solution.CreateDeepCopy();
                 action.Apply(copy);
 
-                decimal sum = 0;
+                float sum = 0;
                 foreach (var heuristic in _heuristics)
                 {
                     sum += heuristic.CalculateScore(solution);
@@ -206,39 +178,37 @@ internal class Optimizer
             }
         }
 
-        var assignments = SolutionWalkingHelper.EnumerableAssignments(solution).Where(pair => !pair.Item2.IsAllSet);
+        var assignments = SolutionWalkingHelper.EnumerableAssignments(solution).Where(pair => !pair.assignment.HasValuesSet());
 
-        Parallel.ForEach(assignments, (value, state, index) => {
+        Parallel.ForEach(assignments, (value, state, index) =>
+        {
             var (assignmentIndex, assignment) = value;
-            if (assignment.IsAllSet)
+            if (assignment.HasValuesSet())
                 return;
 
-            if (!assignment.IsChairPersonSet)
+            foreach (var keyValuePair in solution.SupervisorAndReviewerIdToAssignmentsLeft)
             {
-                foreach (var person in _input.ChairPersonIds)
-                {
-                    var action = new AvailableAction(person, assignmentIndex);
-                    CalculateSumAndAddIfPassesRules(bag, action);
-                }
-            }
+                if (keyValuePair.Value <= 0)
+                    continue;
 
-            if (!assignment.IsSupervisorAndReviewerSet)
-            {
-                foreach (var keyValuePair in solution.SupervisorAndReviewerIdToAssignmentsLeft)
+                foreach (var chairPerson in _input.ChairPersonIds)
                 {
-                    if (keyValuePair.Value <= 0)
+                    if (chairPerson == keyValuePair.Key.reviewerId || chairPerson == keyValuePair.Key.supervisorId)
                         continue;
 
-                    var action = new AvailableAction(keyValuePair.Key.supervisorId, keyValuePair.Key.reviewerId, assignmentIndex);
+                    var action = new AvailableAction(
+                        keyValuePair.Key.supervisorId,
+                        keyValuePair.Key.reviewerId,
+                        (byte)chairPerson,
+                        assignmentIndex);
+
                     CalculateSumAndAddIfPassesRules(bag, action);
                 }
             }
-
         });
 
         return bag.OrderByDescending(a => a.Score).ToArray();
     }
-
 
     internal class Level
     {

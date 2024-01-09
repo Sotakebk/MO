@@ -7,7 +7,7 @@ public struct PartialSolution
     public Day[] Days;
     public Dictionary<(byte supervisorId, byte reviewerId), int> SupervisorAndReviewerIdToAssignmentsLeft;
     public Dictionary<byte, int> ChairPersonAppearanceCount;
-    public decimal Score;
+    public float Score;
 
     public PartialSolution()
     {
@@ -107,55 +107,37 @@ public struct Classroom
     }
 }
 
-[StructLayout(LayoutKind.Explicit, Size = 4)]
+[StructLayout(LayoutKind.Explicit, Size = StructureSize)]
 public struct Assignment
 {
-    public const int SizeInBytes = 4;
+    public const int StructureSize = sizeof(byte)*4;
 
     [FieldOffset(0)] private byte _chairPersonId = 0;
     [FieldOffset(1)] private byte _supervisorId = 0;
     [FieldOffset(2)] private byte _reviewerId = 0;
-    [FieldOffset(3)] private byte _valueFlags = 0;
+    [FieldOffset(3)] private byte _flag = 0;
 
     public byte ChairPersonId => _chairPersonId;
     public byte SupervisorId => _supervisorId;
     public byte ReviewerId => _reviewerId;
 
-    public bool IsAllSet => _valueFlags == 0b11;
-    public bool IsChairPersonSet => (_valueFlags & 0b10) != 0;
-    public bool IsSupervisorAndReviewerSet => (_valueFlags & 0b01) != 0;
-
     public Assignment()
     {
     }
 
-    public void SetSupervisorAndReviewer(byte supervisorId, byte reviewerId)
+    public void SetAssignment(byte supervisorId, byte reviewerId, byte chairPersonId)
     {
 #if DEBUG
-        if (IsSupervisorAndReviewerSet)
+        if (_flag != 0)
         {
-            throw new Exception("Supervisor and reviewer overwrite was attempted, something is wrong!");
+            throw new Exception("Assignment overwrite was attempted, something is wrong!");
         }
 #endif
         _supervisorId = supervisorId;
         _reviewerId = reviewerId;
-        _valueFlags |= 0b01;
-    }
-
-    public void SetChairPerson(byte chairPersonId)
-    {
-#if DEBUG
-        if (IsChairPersonSet)
-        {
-            throw new Exception("ChairPerson overwrite was attempted, something is wrong!");
-        }
-#endif
         _chairPersonId = chairPersonId;
-        _valueFlags |= 0b10;
+        _flag = 1;
     }
 
-    public void UnsetChairPerson(){
-        _chairPersonId = 0;
-        _valueFlags &= 0b01;
-    }
+    public readonly bool HasValuesSet() => _flag != 0;
 }
