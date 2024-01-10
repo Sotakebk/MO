@@ -2,7 +2,7 @@
 
 internal static class SolutionWalkingHelper
 {
-    public static IEnumerable<(AssignmentIndex index, Assignment assignment)> EnumerableAssignments(PartialSolution solution)
+    public static IEnumerable<AssignmentIndex> EnumerableEmptyAssignments(PartialSolution solution)
     {
         for (var d = 0; d < solution.Days.Length; d++)
         {
@@ -12,7 +12,10 @@ internal static class SolutionWalkingHelper
                 var classroom = day.Classrooms[b];
                 for (var s = 0; s < classroom.Assignments.Length; s++)
                 {
-                    yield return (new AssignmentIndex((byte)d, (byte)b, (byte)s), classroom.Assignments[s]);
+                    var assignment = classroom.Assignments[s];
+                    if (assignment.HasValuesSet())
+                        continue;
+                    yield return new AssignmentIndex((byte)d, (byte)b, (byte)s);
                 }
             }
         }

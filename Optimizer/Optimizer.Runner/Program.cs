@@ -1,12 +1,9 @@
-// See https://aka.ms/new-console-template for more information
-
 using System.Globalization;
 using System.Text;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using Optimizer.Logic;
-
-// ReSharper disable TemplateIsNotCompileTimeConstantProblem
 
 using var reader = new StreamReader(Path.Combine("Examples", "assignments.csv"));
 using var reader2 = new StreamReader(Path.Combine("Examples", "chairpersons.csv"));
@@ -18,11 +15,17 @@ var records2 = csv2.GetRecords<ChairPerson>();
 
 using var loggerFactory = LoggerFactory.Create(builder =>
 {
-    builder.AddConsole();
+    builder.AddSimpleConsole(options =>
+    {
+        options.ColorBehavior = LoggerColorBehavior.Enabled;
+        options.IncludeScopes = false;
+        options.SingleLine = false;
+        options.TimestampFormat = "HH:mm:ss.fff ";
+
+    });
     builder.SetMinimumLevel(LogLevel.Trace);
 });
 var logger = loggerFactory.CreateLogger<Program>();
-logger.LogInformation("START OF THIS MASTERPIECE");
 
 var root = new Root(loggerFactory);
 
@@ -70,64 +73,111 @@ var state = root.Optimize(input, ct.Token, OptimizerType.Simple);
 
 
 var operationsLimit = 10000000;
-var timeLimit = TimeSpan.FromSeconds(30);
+var timeLimit = TimeSpan.FromMinutes(60);
 
 
 var timeStart = DateTime.Now;
 
 
-logger.LogInformation($"Start: operationsLimit:{operationsLimit}, timeLimit: {timeLimit}");
+logger.LogInformation($"Start: operationsLimit: {operationsLimit}, timeLimit: {timeLimit}");
 
-while (state.IsWorking && state.OperationsDone < operationsLimit && DateTime.Now < timeStart.Add(timeLimit))
+void LogInfo()
 {
-    logger.LogInformation($"IT: operations: {state.OperationsDone:D10}, dead-ends: {state.DeadEnds}, score:{state.Result?.Score:F5}, depth:{state.CurrentDepth}");
+    logger.LogInformation($"Operations: {state.OperationsDone:D10}, evaluations: {state.Evaluations}, dead-ends: {state.DeadEnds}, partial score: {state.PartialScore}, best complete score:{state.Result?.Score:F5}, depth: {state.CurrentDepth} ({(100f * state.CurrentDepth /(float) state.MaxDepth):F}%, level: {(100 * state.CurrentDepthCompleteness):F}%), pds: {state.PercentDomainSeen:F5}%");
+
+}
+
+bool ShouldStopDueToTimeLimit()
+{
+    if (DateTime.Now > timeStart.Add(timeLimit))
+    {
+        logger?.LogInformation("Timeout, cancelling...");
+        return true;
+    }
+
+    return false;
+}
+
+Console.CancelKeyPress += (sender, eventArgs) =>
+{
+    Finish();
+};
+
+while (state.IsWorking && !ShouldStopDueToTimeLimit())
+{
+    LogInfo();
     await Task.Delay(TimeSpan.FromSeconds(1));
 }
 
-ct.Cancel();
+await Finish();
 
-logger.LogInformation($"DONE: Iterations: {state.OperationsDone}, Score: {state.Result?.Score}, Depth: {state.CurrentDepth}, IN: {DateTime.Now.Subtract(timeStart).TotalSeconds}s");
-
-if (state.Task?.Exception != null)
-    logger.LogError(state.Task?.Exception, "Optimize error");
-
-
-if (state.Result.HasValue)
+async Task Finish()
 {
-    var sb = new StringBuilder();
-    foreach(var day in state.Result.Value.Days)
+    ct.Cancel();
+
+    LogInfo();
+    logger.LogInformation($"DONE! time: {DateTime.Now.Subtract(timeStart).TotalSeconds}");
+
+    if (state.Task?.Exception != null)
+        logger.LogError(state.Task?.Exception, "Optimize error");
+
+
+    if (state.Result.HasValue)
     {
-        sb.AppendLine($"=== Day {day.DayId} ===");
-        foreach (var classroom in day.Classrooms)
+        var sb = new StringBuilder();
+        foreach (var day in state.Result.Value.Days)
         {
-            sb.AppendLine($"== Classroom {classroom.RoomId} ==");
-            foreach (var assignment in classroom.Assignments)
-                sb.AppendLine(assignment.ToString());
+            sb.AppendLine($"=== Day {day.DayId} ===");
+            foreach (var classroom in day.Classrooms)
+            {
+                sb.AppendLine($"== Classroom {classroom.RoomId} ==");
+                foreach (var assignment in classroom.Assignments)
+                    if (assignment != null)
+                    {
+                        sb.AppendLine(assignment.ToString());
+                    }
+                    else
+                    {
+                        sb.AppendLine("Nothing!");
+                    }
+            }
+
+            sb.AppendLine("");
         }
-        sb.AppendLine("");
+
+        var res = sb.ToString();
+        logger.LogInformation(res);
+
+        await using var writer = new StreamWriter("result.txt");
+        await writer.WriteAsync(res); //JsonSerializer.Serialize(state.Result.Value)
+        logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.json"));
+
+        //await using var writerCsv = new StreamWriter("result.json");
+        //state.Result.Value.Days.Select(d => d.Classrooms.Select(c => c.Assignments.Select(a => (a.Value.ReviewerId, a.Value.SupervisorId, a.Value.ChairPersonId)))).ToList();
+        /*
+        var records = new List<CsvRow>
+        {
+            new() { DayId = 0, ClassroomId= 0, ChairPersonId=0, ReviewerId=0, SupervisorId=0 },
+        };
+    
+        using (var writerCsv = new StreamWriter(Path.Join(Directory.GetCurrentDirectory(), "result.csv")))
+        using (var csv = new CsvWriter(writerCsv, CultureInfo.InvariantCulture))
+        {
+            csv.WriteRecords(records);
+        }
+        */
     }
+}
 
-    var res = sb.ToString();
-    logger.LogInformation(res);
+delegate bool EventHandler(CtrlType sig);
 
-    await using var writer = new StreamWriter("result.txt");
-    await writer.WriteAsync(res); //JsonSerializer.Serialize(state.Result.Value)
-    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.json"));
-
-    //await using var writerCsv = new StreamWriter("result.json");
-    //state.Result.Value.Days.Select(d => d.Classrooms.Select(c => c.Assignments.Select(a => (a.Value.ReviewerId, a.Value.SupervisorId, a.Value.ChairPersonId)))).ToList();
-    /*
-    var records = new List<CsvRow>
-    {
-        new() { DayId = 0, ClassroomId= 0, ChairPersonId=0, ReviewerId=0, SupervisorId=0 },
-    };
-
-    using (var writerCsv = new StreamWriter(Path.Join(Directory.GetCurrentDirectory(), "result.csv")))
-    using (var csv = new CsvWriter(writerCsv, CultureInfo.InvariantCulture))
-    {
-        csv.WriteRecords(records);
-    }
-    */
+enum CtrlType
+{
+    CTRL_C_EVENT = 0,
+    CTRL_BREAK_EVENT = 1,
+    CTRL_CLOSE_EVENT = 2,
+    CTRL_LOGOFF_EVENT = 5,
+    CTRL_SHUTDOWN_EVENT = 6
 }
 
 

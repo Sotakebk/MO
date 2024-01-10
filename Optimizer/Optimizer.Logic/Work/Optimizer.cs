@@ -10,16 +10,17 @@ internal sealed class Optimizer
     private readonly Input _input;
     private readonly OptimizationState _state;
     private readonly Stack<Level> _levels;
-    private readonly PartialSolution CleanPartialSolution;
-    private readonly int SearchDepth = 0; // TODO be more sensible
+    private readonly PartialSolution _cleanPartialSolution;
+    private int _scoreEvaluationCounter = 0;
 
     public Optimizer(ILoggerFactory loggerFactory, Input input, OptimizationState state)
     {
         _logger = loggerFactory.CreateLogger(GetType().Name);
         _input = input;
         _state = state;
-        CleanPartialSolution = new PartialSolution(input);
+        _cleanPartialSolution = new PartialSolution(input);
         var expectedDepth = _input.Combinations.Sum(c => c.TotalCount);
+        _state.MaxDepth = expectedDepth;
         _levels = new Stack<Level>(expectedDepth);
     }
 
@@ -39,8 +40,9 @@ internal sealed class Optimizer
         var root = new Level();
         root.Depth = 0;
         root.LastPickedFollowingState = -1;
-        root.FollowingActions = GetFollowingActions(CleanPartialSolution);
-        root.CurrentPartialSolution = CleanPartialSolution;
+        _state.CurrentDepth = 0;
+        root.FollowingActions = GetFollowingActions(_cleanPartialSolution);
+        root.CurrentPartialSolution = _cleanPartialSolution;
 
         _levels.Push(root);
 
@@ -54,6 +56,16 @@ internal sealed class Optimizer
 
             var level = _levels.Peek();
             _state.CurrentDepth = level.Depth;
+            _state.PartialScore = level.CurrentPartialSolution.Score;
+            double multiplier = 1;
+            double sum = 0;
+            foreach (var l in _levels.Reverse())
+            {
+                sum += (Math.Max(0, l.LastPickedFollowingState) / (double)l.FollowingActions.Length) * multiplier;
+                multiplier /= l.FollowingActions.Length;
+            }
+
+            _state.PercentDomainSeen = (float)(sum * 100);
 
             level.LastPickedFollowingState++;
             if (level.LastPickedFollowingState < level.FollowingActions.Length)
@@ -106,8 +118,10 @@ internal sealed class Optimizer
         }
     }
 
-    private static float GetScoreForSolution(ref PartialSolution solution)
+    private float GetScoreForSolution(ref PartialSolution solution)
     {
+        Interlocked.Increment(ref _scoreEvaluationCounter);
+        _state.Evaluations = _scoreEvaluationCounter;
         return GeneralPeopleHeuristic.CalculateScore(solution);
     }
 
@@ -158,20 +172,42 @@ internal sealed class Optimizer
     private AvailableAction[] GetFollowingActions(PartialSolution solution)
     {
         var actions = CollectAvailableActionsMultithreaded(solution);
-        var depth = solution.CurrentDepth - 30;
+        var temp = solution.CurrentDepth / ((float)solution.MaxDepth);
+        temp = temp * temp * temp * temp * temp * temp * temp;
+        //var depth = Math.Min((int)(solution.MaxDepth * temp), solution.MaxDepth - solution.CurrentDepth);
+        //var persistence = solution.CurrentDepth / (float)solution.MaxDepth;
 
+        // x^5
+        //persistence = persistence * persistence * persistence * persistence * persistence;
+        //var proportion = (1 + solution.CurrentDepth) / (float)solution.MaxDepth;
+        // x^9
+        //proportion = proportion * proportion * proportion * proportion * proportion * proportion * proportion * proportion * proportion;
+
+        /*
+        var tempProportionForPrinting = proportion;
+        _logger.LogDebug($"Evaluating {actions.Length} actions");
+        for (int i = 0; i <= depth; i++)
+        {
+            _logger.LogDebug($"At child level {i} evaluating actions with {(100*tempProportionForPrinting):F4}% of children");
+            tempProportionForPrinting *= persistence;
+        }*/
+
+        var depth = Math.Max(0, solution.CurrentDepth - solution.MaxDepth + 15);
+        var proportion = 0.01f;
+        var persistence = 1;
+
+        var complete = 0;
         Parallel.For(0, actions.Length, i =>
         {
-        //for(int i = 0; i < actions.Length; i++
-            actions[i].Score = DeepSearchForMaxScore(actions[i], ref solution, depth) ?? float.NegativeInfinity;
+            //for(int i = 0; i < actions.Length; i++
+            actions[i].Score = DeepSearchForMaxScore(actions[i], ref solution, depth, proportion, persistence) ?? float.NegativeInfinity;
+
+            Interlocked.Increment(ref complete);
+            _state.CurrentDepthCompleteness = complete / (float)actions.Length;
         });
 
         var value = actions.Where(a => !float.IsNegativeInfinity(a.Score))
             .OrderByDescending(a => a.Score)
-            .ThenBy(a => a.ChairPersonId)
-            .ThenBy(a => a.ReviewerId)
-            .ThenBy(a => a.SupervisorId)
-            .ThenBy(a => a.AssignmentId.Index)
             .ToArray();
 
         return value;
@@ -182,13 +218,14 @@ internal sealed class Optimizer
     /// </summary>
     private AvailableAction[] CollectAvailableActions(PartialSolution solution)
     {
-        var assignments = SolutionWalkingHelper.EnumerableAssignments(solution)
-            .Where(pair => !pair.assignment.HasValuesSet());
+        var assignments = SolutionWalkingHelper.EnumerableEmptyAssignments(solution).ToArray();
 
         var actions = new List<AvailableAction>();
 
-        foreach (var (assignmentIndex, assignment) in assignments)
+        for (var index = 0; index < assignments.Length; index++)
         {
+            var assignmentIndex = assignments[index];
+
             foreach (var keyValuePair in solution.SupervisorAndReviewerIdToAssignmentsLeft)
             {
                 if (keyValuePair.Value <= 0)
@@ -214,19 +251,30 @@ internal sealed class Optimizer
         return actions.ToArray();
     }
 
+    private static void Shuffle<T>(T[] array)
+    {
+        var rng = new Random();
+        var n = array.Length;
+        while (n > 1)
+        {
+            var k = rng.Next(n);
+            n--;
+            (array[n], array[k]) = (array[k], array[n]);
+        }
+    }
+
     /// <summary>
     /// Collects actions that pass rules, but doesn't calculate score.
     /// </summary>
     private AvailableAction[] CollectAvailableActionsMultithreaded(PartialSolution solution)
     {
-        var assignments = SolutionWalkingHelper.EnumerableAssignments(solution)
-            .Where(pair => !pair.assignment.HasValuesSet());
+        var assignments = SolutionWalkingHelper.EnumerableEmptyAssignments(solution).ToArray();
 
         var actions = new List<AvailableAction>();
 
-        Parallel.ForEach(assignments, (value, state, index) =>
+        Parallel.For(0, assignments.Length, index =>
         {
-            var (assignmentIndex, _) = value;
+            var assignmentIndex = assignments[index];
 
             foreach (var keyValuePair in solution.SupervisorAndReviewerIdToAssignmentsLeft)
             {
@@ -251,24 +299,20 @@ internal sealed class Optimizer
             }
         });
 
-        var value = actions.OrderByDescending(a => a.Score)
-            .ThenBy(a => a.ChairPersonId)
-            .ThenBy(a => a.ReviewerId)
-            .ThenBy(a => a.SupervisorId)
-            .ThenBy(a => a.AssignmentId.Index)
-            .ToArray();
+        var value = actions.ToArray();
 
         return value;
     }
 
-    private float? DeepSearchForMaxScore(AvailableAction action, ref PartialSolution solution, int depth)
+    private float? DeepSearchForMaxScore(AvailableAction action, ref PartialSolution solution, int depth, float proportion, float persistence)
     {
+        proportion = MathF.Max(0, MathF.Min(proportion, 1));
         var copy = solution.CreateDeepCopy();
         action.Apply(ref copy);
-        return DeepSearchForMaxScore(ref copy, depth);
+        return DeepSearchForMaxScore(ref copy, depth, proportion, persistence);
     }
 
-    private float? DeepSearchForMaxScore(ref PartialSolution solution, int depth)
+    private float? DeepSearchForMaxScore(ref PartialSolution solution, int depth, float proportion, float persistence)
     {
         if (solution.CurrentDepth == solution.MaxDepth)
         {
@@ -291,20 +335,62 @@ internal sealed class Optimizer
             return null;
         }
 
-        float? score = null;
-        void SaveIfGreater(float? value)
+        IEnumerable<AvailableAction> actionsToEvaluate;
+        if (proportion >= 1)
         {
-            if (value != null)
-                score = MathF.Max(value.Value, score ?? float.MinValue);
+            actionsToEvaluate = actions;
+        }
+        else
+        {
+            var actionsToEvaluateCount = Math.Max(1, (int)(proportion * actions.Length));
+
+            if (actionsToEvaluateCount == 1)
+            {
+                actionsToEvaluate = new[] { actions[new Random().Next(actions.Length)] };
+            }
+            else
+            {
+                Shuffle(actions);
+                actionsToEvaluate = actions.Take(actionsToEvaluateCount);
+            }
         }
 
+        float newProportion = 0;
+        if (persistence > 1)
+        {
+            // increasingly more actions
+            newProportion = 1f - (1 - newProportion) * (persistence - 1);
+        }
+        else
+        {
+            // calculate less values
+            newProportion = proportion * persistence;
+        }
+
+        var validScoreCount = 0;
+        var accumulator = 0f;
+        var maxValue = float.MinValue;
         // check max value of all available actions
-        foreach (var action in actions)
+        foreach (var action in actionsToEvaluate)
         {
-            SaveIfGreater(DeepSearchForMaxScore(action, ref solution, depth - 1));
+            var score = DeepSearchForMaxScore(action, ref solution, depth - 1, newProportion, persistence);
+
+            if (score != null)
+            {
+                validScoreCount++;
+                accumulator += score.Value;
+                maxValue = MathF.Max(maxValue, score.Value);
+            }
         }
 
-        return score;
+        if (validScoreCount == 0)
+            return null;
+
+        // how many results were calculated out of the available and non-dead-end ones
+        proportion = (validScoreCount / (float)actions.Length);
+
+        // weighted average between average of averages and current state score with maxValue from evaluated actions
+        return (1 - proportion) * ((accumulator / (float)validScoreCount) + GetScoreForSolution(ref solution)) / 2f + proportion * maxValue;
     }
 }
 
