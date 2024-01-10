@@ -16,34 +16,28 @@ internal static class GeneralPeopleHeuristic
 
     public struct Metric
     {
-        private static byte _count = 0;
+        private static byte _count;
         public static byte Count => _count;
 
         private static Metric Create(float factor = 1.0f, bool depthDependant = false)
         {
-            return new Metric() { Id = _count++, Factor = factor, DepthDependant = depthDependant };
+            var metric = new Metric() { Id = _count++, Factor = factor, DepthDependant = depthDependant };
+            Metrics[metric.Id] = metric;
+            return metric;
         }
 
         public byte Id;
         public float Factor;
         public bool DepthDependant;
+        
+        public static readonly Metric[] Metrics = new Metric[10];
 
         public static Metric VacationDay = Create();
         public static Metric EveningStarting = Create(depthDependant: true);
-        public static Metric DailyAssignmentsCount = Create(1.4f);
+        public static Metric DailyAssignmentsCount = Create();
         public static Metric DailyOverspread = Create();
         public static Metric SubsequentAssignmentsCount = Create();
         public static Metric SwitchingClasses = Create();
-
-        public static readonly Metric[] Metrics = new[]
-        {
-            VacationDay,
-            EveningStarting,
-            DailyAssignmentsCount,
-            DailyOverspread,
-            SubsequentAssignmentsCount,
-            SwitchingClasses
-        };
     }
 
 
@@ -187,13 +181,15 @@ internal static class GeneralPeopleHeuristic
         {
             var depthPercentage = 1.0f * _solution.CurrentDepth / _solution.MaxDepth;
             var sum = 0f;
+            var personMetrics = new float[Metric.Count];
 
             for (var personIndex = 0; personIndex <= byte.MaxValue; personIndex++)
             {
+                for (var i = 0; i < Metric.Count; i++)
+                    personMetrics[i] = 0;
                 var person = _peopleMemory[personIndex];
                 if (!person.Exists)
                     continue;
-                var personMetrics = new float[Metric.Count];
                 for (var dayIndex = 0; dayIndex < person.Days.Length; dayIndex++)
                 {
                     var day = person.Days[dayIndex];
@@ -251,11 +247,13 @@ internal static class GeneralPeopleHeuristic
                     personMetrics[m] *= Metric.Metrics[m].Factor;
                     sum += personMetrics[m];
                 }
-
-                _solution.PeopleMetrics[personIndex] = personMetrics;
+                // TODO: return or print?
+                // PeopleMetrics[personIndex] = personMetrics;
             }
 
             return sum;
         }
+
+        // private Dictionary<int, float[]> PeopleMetrics { get; set; } = new();
     }
 }

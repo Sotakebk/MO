@@ -4,7 +4,6 @@ public struct Solution
 {
     public float Score { get; set; }
     public SolutionDay[] Days { get; set; }
-    public Dictionary<int, float[]> PeopleMetrics { get; set; }
 }
 
 public struct SolutionDay
