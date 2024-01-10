@@ -14,6 +14,39 @@ internal static class GeneralPeopleHeuristic
         return operation.CalculateScore();
     }
 
+    public struct Metric
+    {
+        private static byte _count = 0;
+        public static byte Count => _count;
+
+        private static Metric Create(float factor = 1.0f, bool depthDependant = false)
+        {
+            return new Metric() { Id = _count++, Factor = factor, DepthDependant = depthDependant };
+        }
+
+        public byte Id;
+        public float Factor;
+        public bool DepthDependant;
+
+        public static Metric VacationDay = Create();
+        public static Metric EveningStarting = Create(depthDependant: true);
+        public static Metric DailyAssignmentsCount = Create(1.4f);
+        public static Metric DailyOverspread = Create();
+        public static Metric SubsequentAssignmentsCount = Create();
+        public static Metric SwitchingClasses = Create();
+
+        public static readonly Metric[] Metrics = new[]
+        {
+            VacationDay,
+            EveningStarting,
+            DailyAssignmentsCount,
+            DailyOverspread,
+            SubsequentAssignmentsCount,
+            SwitchingClasses
+        };
+    }
+
+
     private class Operation
     {
         // TODO3: Żeby obrony zaczynały się od rana (czyli mozna liczyc ile jest dziury rano mają mniejsze penalty, niż dziury wieczorem), użycie kolejnego dnia obron powinno być również penalty
@@ -53,7 +86,7 @@ internal static class GeneralPeopleHeuristic
                 Exists = true;
                 TotalAssignments = 0;
                 Days = new PersonPerDayMemory[days];
-                for (int i = 0; i < days; i++)
+                for (var i = 0; i < days; i++)
                     Days[i] = new PersonPerDayMemory();
             }
         }
@@ -71,10 +104,10 @@ internal static class GeneralPeopleHeuristic
 
         public Operation(PartialSolution solution)
         {
-            _peopleMemory = new PersonMemory[byte.MaxValue+1];
+            _peopleMemory = new PersonMemory[byte.MaxValue + 1];
             var daysInPartialSolution = solution.Days.Length;
             _daysMemory = new DayMemory[daysInPartialSolution];
-            
+
             for (var i = 0; i < solution.PeopleIds.Count; i++)
             {
                 _peopleMemory[solution.PeopleIds[i]] = new PersonMemory(daysInPartialSolution);
@@ -82,7 +115,7 @@ internal static class GeneralPeopleHeuristic
 
             _solution = solution;
         }
-        
+
         public void Work()
         {
             for (var dIndex = 0; dIndex < _solution.Days.Length; dIndex++)
@@ -90,7 +123,6 @@ internal static class GeneralPeopleHeuristic
                 var solutionDay = _solution.Days[dIndex];
                 for (var aIndex = 0; aIndex < solutionDay.SlotCount; aIndex++)
                 {
-
                     for (int cIndex = 0; cIndex < solutionDay.Classrooms.Length; cIndex++)
                     {
                         // chronologically
@@ -132,6 +164,7 @@ internal static class GeneralPeopleHeuristic
                                         EndIndex = aIndex
                                     });
                                 }
+
                                 memory.Days[dIndex].TotalAssignments++;
                             }
                         }
@@ -152,14 +185,15 @@ internal static class GeneralPeopleHeuristic
 
         public float CalculateScore()
         {
+            var depthPercentage = 1.0f * _solution.CurrentDepth / _solution.MaxDepth;
             var sum = 0f;
 
-            for(var _i = 0; _i <= byte.MaxValue; _i++)
+            for (var personIndex = 0; personIndex <= byte.MaxValue; personIndex++)
             {
-                var person = _peopleMemory[_i];
+                var person = _peopleMemory[personIndex];
                 if (!person.Exists)
                     continue;
-
+                var personMetrics = new float[Metric.Count];
                 for (var dayIndex = 0; dayIndex < person.Days.Length; dayIndex++)
                 {
                     var day = person.Days[dayIndex];
@@ -168,12 +202,12 @@ internal static class GeneralPeopleHeuristic
                     if (day.FirstAssignment == null || day.LastAssignment == null)
                     {
                         // prize for empty day multiplied by slot count
-                        sum += 1.0f; // * _solution.Days[dayIndex].SlotCount;
+                        personMetrics[Metric.VacationDay.Id] += 1.0f * _solution.Days[dayIndex].SlotCount;
                         continue;
                     }
 
                     // penaly for evening starting
-                    sum -= day.FirstAssignment.Value;
+                    personMetrics[Metric.EveningStarting.Id] -= day.FirstAssignment.Value;
 
                     var assignmentSpread = day.LastAssignment.Value - day.FirstAssignment.Value;
                     var assignmentsTotal = day.TotalAssignments;
@@ -181,34 +215,44 @@ internal static class GeneralPeopleHeuristic
                     // penalty for having assignments away from a perfect range
                     // having one assignment in a day makes no sense
                     // having too many is overworking
-                    sum += Math.Min(
-                            Math.Min(0, assignmentsTotal - MinPerfectAssignmentsPerDayCount),
-                            Math.Min(0, MaxPerfectAssignmentsPerDayCount - assignmentsTotal)
-                            );
+                    personMetrics[Metric.DailyAssignmentsCount.Id] += Math.Min(
+                        Math.Min(0, assignmentsTotal - MinPerfectAssignmentsPerDayCount),
+                        Math.Min(0, MaxPerfectAssignmentsPerDayCount - assignmentsTotal)
+                    );
 
                     // starting early with one assignment, and finishing with another very late makes no sense
                     // limit how far those may be by giving negative points for the value being too big
-                    sum += Math.Min(0, AcceptableMaxAssignmentSpreadPerDay - assignmentSpread);
+                    personMetrics[Metric.DailyOverspread.Id] += Math.Min(0, AcceptableMaxAssignmentSpreadPerDay - assignmentSpread);
 
-                    for (int i = 0; i < day.AssignmentBlocks.Count; i++)
+                    for (var blockId = 0; blockId < day.AssignmentBlocks.Count; blockId++)
                     {
-                        var assignmentBlock = day.AssignmentBlocks[i];
+                        var assignmentBlock = day.AssignmentBlocks[blockId];
                         var assignmentsInBlock = assignmentBlock.EndIndex - assignmentBlock.StartIndex + 1;
                         // penalty for block being too large
-                        sum += Math.Min(0, AcceptableMaxAssignmentsInBlockPerDay - assignmentsInBlock);
+                        personMetrics[Metric.SubsequentAssignmentsCount.Id] += Math.Min(0, AcceptableMaxAssignmentsInBlockPerDay - assignmentsInBlock);
 
-                        if (i < day.AssignmentBlocks.Count - 1)
+                        if (blockId < day.AssignmentBlocks.Count - 1)
                         {
                             // penalty for switching classes right between two assignments
-                            var block2 = day.AssignmentBlocks[i + 1];
+                            var block2 = day.AssignmentBlocks[blockId + 1];
                             if (assignmentBlock.ClassroomIndex != block2.ClassroomIndex
                                 && assignmentBlock.EndIndex + 1 == block2.StartIndex)
                             {
-                                sum += -1;
+                                personMetrics[Metric.SwitchingClasses.Id] -= 1;
                             }
                         }
                     }
                 }
+
+                for (var m = 0; m < Metric.Count; m++)
+                {
+                    if (Metric.Metrics[m].DepthDependant)
+                        personMetrics[m] *= depthPercentage;
+                    personMetrics[m] *= Metric.Metrics[m].Factor;
+                    sum += personMetrics[m];
+                }
+
+                _solution.PeopleMetrics[personIndex] = personMetrics;
             }
 
             return sum;

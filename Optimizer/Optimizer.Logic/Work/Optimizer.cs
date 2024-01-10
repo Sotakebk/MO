@@ -101,6 +101,7 @@ internal sealed class Optimizer
     {
         if (solution.Score > (_state.Result?.Score ?? float.MinValue))
         {
+            GeneralPeopleHeuristic.CalculateScore(solution); // TODO: for people score metrics
             _state.Result = CreateSolutionFromPartialSolution(solution);
         }
     }
@@ -117,12 +118,12 @@ internal sealed class Optimizer
 
     private static Solution CreateSolutionFromPartialSolution(PartialSolution partialSolution)
     {
-        var s = new Solution()
+        var s = new Solution
         {
-            Score = partialSolution.Score
+            Score = partialSolution.Score,
+            PeopleMetrics = new Dictionary<int, float[]>(partialSolution.PeopleMetrics),
+            Days = new SolutionDay[partialSolution.Days.Length]
         };
-
-        s.Days = new SolutionDay[partialSolution.Days.Length];
 
         for (var i = 0; i < s.Days.Length; i++)
         {

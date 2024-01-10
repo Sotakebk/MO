@@ -7,7 +7,8 @@ public struct PartialSolution
     public Day[] Days;
     public Dictionary<(byte supervisorId, byte reviewerId), int> SupervisorAndReviewerIdToAssignmentsLeft;
     public Dictionary<byte, int> ChairPersonAppearanceCount;
-    public IReadOnlyList<byte> PeopleIds = Array.Empty<byte>();
+    public IReadOnlyList<byte> PeopleIds;
+    public Dictionary<int, float[]> PeopleMetrics;
     public int CurrentDepth = 0;
     public int MaxDepth = 0;
     public float Score = 0;
@@ -17,10 +18,14 @@ public struct PartialSolution
         Days = Array.Empty<Day>();
         SupervisorAndReviewerIdToAssignmentsLeft = new();
         ChairPersonAppearanceCount = new();
+        PeopleMetrics = new();
+        PeopleIds = Array.Empty<byte>();
     }
 
     public PartialSolution(Input input)
     {
+        PeopleMetrics = new();
+        PeopleIds = Array.Empty<byte>();
         Days = new Day[input.Days.Length];
         for (var i = 0; i < input.Days.Length; i++)
         {
@@ -60,6 +65,7 @@ public struct PartialSolution
 
         ps.SupervisorAndReviewerIdToAssignmentsLeft = new Dictionary<(byte supervisorId, byte reviewerId), int>(SupervisorAndReviewerIdToAssignmentsLeft);
         ps.ChairPersonAppearanceCount = new Dictionary<byte, int>(ChairPersonAppearanceCount);
+        ps.PeopleMetrics = new Dictionary<int, float[]>(PeopleMetrics);
         ps.MaxDepth = MaxDepth;
         ps.CurrentDepth = CurrentDepth;
         ps.Score = Score;
