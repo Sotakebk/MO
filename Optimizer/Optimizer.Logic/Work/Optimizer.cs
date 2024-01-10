@@ -134,7 +134,7 @@ internal sealed class Optimizer
             {
                 var partialSolutionClassroom = partialSolutionDay.Classrooms[j];
                 vbs[j].RoomId = partialSolutionClassroom.RoomId;
-                vbs[j].Assignments = new SolutionAssignment?[partialSolutionClassroom.Assignments.Length];
+                vbs[j].Assignments = new SolutionAssignment[partialSolutionClassroom.Assignments.Length];
 
                 var assignments = partialSolutionClassroom.Assignments;
                 for (var k = 0; k < partialSolutionClassroom.Assignments.Length; k++)

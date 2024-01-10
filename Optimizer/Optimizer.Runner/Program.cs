@@ -1,12 +1,13 @@
-// See https://aka.ms/new-console-template for more information
+// ReSharper disable TemplateIsNotCompileTimeConstantProblem
 
 using System.Globalization;
-using System.Text;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
 using Optimizer.Logic;
+using Optimizer.Runner;
 
-// ReSharper disable TemplateIsNotCompileTimeConstantProblem
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 using var reader = new StreamReader(Path.Combine("Examples", "assignments.csv"));
 using var reader2 = new StreamReader(Path.Combine("Examples", "chairpersons.csv"));
@@ -69,8 +70,8 @@ var ct = new CancellationTokenSource();
 var state = root.Optimize(input, ct.Token, OptimizerType.Simple);
 
 
-var operationsLimit = 10000000;
-var timeLimit = TimeSpan.FromSeconds(30);
+var operationsLimit = 100000000;
+var timeLimit = TimeSpan.FromSeconds(30) * 2 * 10;
 
 
 var timeStart = DateTime.Now;
@@ -94,50 +95,15 @@ if (state.Task?.Exception != null)
 
 if (state.Result.HasValue)
 {
-    var sb = new StringBuilder();
-    foreach(var day in state.Result.Value.Days)
-    {
-        sb.AppendLine($"=== Day {day.DayId} ===");
-        foreach (var classroom in day.Classrooms)
-        {
-            sb.AppendLine($"== Classroom {classroom.RoomId} ==");
-            foreach (var assignment in classroom.Assignments)
-                sb.AppendLine(assignment.ToString());
-        }
-        sb.AppendLine("");
-    }
-
-    var res = sb.ToString();
-    logger.LogInformation(res);
+    var textResult = Exports.Pretty(state.Result.Value);
+    logger.LogInformation(textResult);
 
     await using var writer = new StreamWriter("result.txt");
-    await writer.WriteAsync(res); //JsonSerializer.Serialize(state.Result.Value)
-    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.json"));
+    await writer.WriteAsync(textResult);
+    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.txt"));
 
-    //await using var writerCsv = new StreamWriter("result.json");
-    //state.Result.Value.Days.Select(d => d.Classrooms.Select(c => c.Assignments.Select(a => (a.Value.ReviewerId, a.Value.SupervisorId, a.Value.ChairPersonId)))).ToList();
-    /*
-    var records = new List<CsvRow>
-    {
-        new() { DayId = 0, ClassroomId= 0, ChairPersonId=0, ReviewerId=0, SupervisorId=0 },
-    };
-
-    using (var writerCsv = new StreamWriter(Path.Join(Directory.GetCurrentDirectory(), "result.csv")))
-    using (var csv = new CsvWriter(writerCsv, CultureInfo.InvariantCulture))
-    {
-        csv.WriteRecords(records);
-    }
-    */
-}
-
-
-public class CsvRow
-{
-    public int DayId{ get; set; }
-    public int ClassroomId{ get; set; }
-    public int? ChairPersonId { get; set; }
-    public int? SupervisorId { get; set; }
-    public int? ReviewerId { get; set; }
+    await Exports.WriteToXlsx("result.xlsx", state.Result.Value, overwrite: true);
+    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.xlsx"));
 }
 
 public class Assignments
