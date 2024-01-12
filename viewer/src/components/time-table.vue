@@ -85,7 +85,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, onMounted } from "vue";
+import { defineProps, nextTick, onMounted, ref, watch } from "vue";
 import ScheduleEntry from "@/components/schedule-slot.vue";
 import { Slot } from "@/types/data-types";
 
@@ -100,15 +100,29 @@ ref(0);
 const entriesLeft = ref([]);
 
 onMounted(() => {
-  console.log("props", props.entries);
-  const outsideSlots = [];
-  for (const entry of props.entries) {
-    console.log(entry.titleName);
-    outsideSlots.push(new Slot(null, entry));
-  }
-  entriesLeft.value = outsideSlots;
-  console.log(outsideSlots);
+  nextTick(() => {
+    console.log("props", props.entries);
+    const outsideSlots = [];
+    for (const entry of props.entries) {
+      console.log(entry.titleName);
+      outsideSlots.push(new Slot(null, entry));
+    }
+    entriesLeft.value = outsideSlots;
+    console.log(outsideSlots);
+  });
 });
+
+watch(
+  () => props.entries,
+  () => {
+    const outsideSlots = [];
+    for (const entry of props.entries) {
+      console.log(entry.titleName);
+      outsideSlots.push(new Slot(null, entry));
+    }
+    entriesLeft.value = outsideSlots;
+  }
+);
 
 const handleItemClick = (index) => {
   if (selected.value == null) {
