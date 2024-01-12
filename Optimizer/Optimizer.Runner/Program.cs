@@ -1,5 +1,6 @@
 // ReSharper disable TemplateIsNotCompileTimeConstantProblem
 
+using System.Diagnostics;
 using System.Globalization;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
@@ -32,11 +33,12 @@ Input input = new Input()
 {
     ChairPersonIds = records2.Select(row => row.ChairPersonId).ToArray(),
     Combinations = records1
-        .GroupBy(assignments => (assignments.ReviewerId, assignments.SupervisorId),
+        .Select(assignments => assignments.ReviewerId < assignments.SupervisorId ? (assignments.ReviewerId, assignments.SupervisorId) : (assignments.SupervisorId, assignments.ReviewerId))
+        .GroupBy(assignments => (assignments.Item1, assignments.Item2),
             (key, enumerable) => new InputCombination()
             {
-                ReviewerId = key.ReviewerId,
-                PromoterId = key.SupervisorId,
+                ReviewerId = key.Item2,
+                PromoterId = key.Item1,
                 TotalCount = enumerable.Count()
             }).ToArray(),
     Days = new[]
@@ -71,7 +73,7 @@ var state = root.Optimize(input, ct.Token, OptimizerType.Simple);
 
 
 var operationsLimit = 100000000;
-var timeLimit = TimeSpan.FromSeconds(30) * 2 * 10;
+var timeLimit = TimeSpan.FromSeconds(60);
 
 
 var timeStart = DateTime.Now;
@@ -95,15 +97,19 @@ if (state.Task?.Exception != null)
 
 if (state.Result.HasValue)
 {
+    var filename = "result-" + DateTime.Now.ToString("ddMMyy-HHmmss");
     var textResult = Exports.Pretty(state.Result.Value);
     logger.LogInformation(textResult);
 
-    await using var writer = new StreamWriter("result.txt");
+    await using var writer = new StreamWriter($"{filename}.txt");
     await writer.WriteAsync(textResult);
-    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.txt"));
+    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), $"{filename}.txt"));
 
-    await Exports.WriteToXlsx("result.xlsx", state.Result.Value, overwrite: true);
-    logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), "result.xlsx"));
+    await Exports.WriteToXlsx($"{filename}.xlsx", state.Result.Value, overwrite: true);
+    var path = Path.Join(Directory.GetCurrentDirectory(), $"{filename}.xlsx");
+    logger.LogInformation("Result saved: {Path}", path);
+    Process.Start("explorer", path);
+    
 }
 
 public class Assignments

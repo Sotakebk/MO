@@ -117,6 +117,9 @@ internal sealed class Optimizer
 
     private static Solution CreateSolutionFromPartialSolution(PartialSolution partialSolution)
     {
+#if DEBUG
+        GeneralPeopleHeuristic.CalculateScore(partialSolution);
+#endif
         var s = new Solution
         {
             Score = partialSolution.Score,
