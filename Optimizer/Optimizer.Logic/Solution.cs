@@ -20,7 +20,7 @@ public struct SolutionDay
 public struct SolutionClassroom
 {
     public int RoomId { get; set; }
-    public SolutionAssignment?[] Assignments { get; set; }
+    public SolutionAssignment[] Assignments { get; set; }
 
     public readonly override string ToString()
     {

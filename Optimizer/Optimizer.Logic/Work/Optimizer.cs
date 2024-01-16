@@ -132,12 +132,14 @@ internal sealed class Optimizer
 
     private static Solution CreateSolutionFromPartialSolution(PartialSolution partialSolution)
     {
-        var s = new Solution()
+#if DEBUG
+        GeneralPeopleHeuristic.CalculateScore(partialSolution);
+#endif
+        var s = new Solution
         {
-            Score = partialSolution.Score
+            Score = partialSolution.Score,
+            Days = new SolutionDay[partialSolution.Days.Length]
         };
-
-        s.Days = new SolutionDay[partialSolution.Days.Length];
 
         for (var i = 0; i < s.Days.Length; i++)
         {
@@ -150,7 +152,7 @@ internal sealed class Optimizer
             {
                 var partialSolutionClassroom = partialSolutionDay.Classrooms[j];
                 vbs[j].RoomId = partialSolutionClassroom.RoomId;
-                vbs[j].Assignments = new SolutionAssignment?[partialSolutionClassroom.Assignments.Length];
+                vbs[j].Assignments = new SolutionAssignment[partialSolutionClassroom.Assignments.Length];
 
                 var assignments = partialSolutionClassroom.Assignments;
                 for (var k = 0; k < partialSolutionClassroom.Assignments.Length; k++)
