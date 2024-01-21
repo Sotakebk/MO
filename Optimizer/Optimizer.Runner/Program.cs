@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using OfficeOpenXml;
 using Optimizer.Logic;
+using Optimizer.Logic.Work;
 using Optimizer.Runner;
 
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -29,19 +30,16 @@ using var loggerFactory = LoggerFactory.Create(builder =>
 });
 var logger = loggerFactory.CreateLogger<Program>();
 
-var root = new Root(loggerFactory);
-
 Input input = new Input()
 {
-    ChairPersonIds = records2.Select(row => row.ChairPersonId).ToArray(),
-    Combinations = records1
-        .Select(assignments => assignments.ReviewerId < assignments.SupervisorId ? (assignments.ReviewerId, assignments.SupervisorId) : (assignments.SupervisorId, assignments.ReviewerId))
-        .GroupBy(assignments => (assignments.Item1, assignments.Item2),
-            (key, enumerable) => new InputCombination()
+    AvailableChairPersonIds = records2.Select(row => row.ChairPersonId).ToArray(),
+    DefensesToAssign = records1.GroupBy(r => (reviewer: r.ReviewerId, supervisor: r.SupervisorId))
+        .Select(group =>
+            new InputCombination()
             {
-                ReviewerId = key.Item2,
-                PromoterId = key.Item1,
-                TotalCount = enumerable.Count()
+                ReviewerId = group.Key.reviewer,
+                PromoterId = group.Key.supervisor,
+                TotalCount = group.Count()
             }).ToArray(),
     Days = new[]
     {
@@ -50,39 +48,47 @@ Input input = new Input()
             Id = 1,
             Classrooms = new[]
             {
-                new InputClassroom() { RoomId = 1 },
-                new InputClassroom() { RoomId = 2 }
+                new InputClassroom(0, slots: 17, 8, 9),
+                new InputClassroom(1, slots: 16, 8, 8),
             },
-            SlotCount = 18
         },
         new InputDay()
         {
             Id = 2,
             Classrooms = new[]
             {
-                new InputClassroom() { RoomId = 1 },
-                new InputClassroom() { RoomId = 2 }
+                new InputClassroom(0, slots: 16, 8, 8),
+                new InputClassroom(1, slots: 16, 8, 8),
             },
-            SlotCount = 18
         },
     },
-    ForbiddenSlots = Array.Empty<(int, int, int)>()
 };
 
 var ct = new CancellationTokenSource();
 
-var state = root.Optimize(input, ct.Token, OptimizerType.Simple);
+var algorithm = OptimizationAlgorithm.Optimize(input, ct.Token, loggerFactory);
 
 var operationsLimit = 100000000;
-var timeLimit = TimeSpan.FromSeconds(60);
+var timeLimit = TimeSpan.FromMinutes(60);
 
 var timeStart = DateTime.Now;
 
 logger.LogInformation($"Start: operationsLimit: {operationsLimit}, timeLimit: {timeLimit}");
 
+IOptimizerStateDetails? GetActiveOptimizerStateDetails()
+{
+    if (algorithm?.AssignmentOptimizerStateDetails != null)
+        return algorithm.AssignmentOptimizerStateDetails;
+
+    if (algorithm?.ChairPersonOptimizerStateDetails != null)
+        return algorithm.ChairPersonOptimizerStateDetails;
+    return null;
+}
+
 void LogInfo()
 {
-    logger.LogInformation($"Operations: {state.OperationsDone:D10}, evaluations: {state.Evaluations}, dead-ends: {state.DeadEnds}, partial score: {state.PartialScore}, best complete score:{state.Result?.Score:F5}, depth: {state.CurrentDepth} ({(100f * state.CurrentDepth / (float)state.MaxDepth):F}%, level: {(100 * state.CurrentDepthCompleteness):F}%), pds: {state.PercentDomainSeen:F5}%");
+    var state = GetActiveOptimizerStateDetails();
+    logger.LogInformation($"ops: {state?.OperationsDone:D10}, evs: {state?.Evaluations}, dead-ends: {state?.DeadEnds}, partial score: {state?.PartialScore}, best score:{state?.ResultScore:F5}, depth: {state?.CurrentDepth} ({(100f * state.CurrentDepth / (float)state.MaxDepth):F}%, level: {(100 * state.CurrentDepthCompleteness):F}%), pds: {state.PercentDomainSeen:F5}%");
 }
 
 bool ShouldStopDueToTimeLimit()
@@ -101,7 +107,7 @@ Console.CancelKeyPress += (sender, eventArgs) =>
     Finish().RunSynchronously();
 };
 
-while (state.IsWorking && !ShouldStopDueToTimeLimit())
+while (algorithm.IsWorking && !ShouldStopDueToTimeLimit())
 {
     LogInfo();
     await Task.Delay(TimeSpan.FromSeconds(1));
@@ -116,20 +122,22 @@ async Task Finish()
     LogInfo();
     logger.LogInformation($"DONE! time: {DateTime.Now.Subtract(timeStart).TotalSeconds}");
 
-    if (state.Task?.Exception != null)
-        logger.LogError(state.Task?.Exception, "Optimize error");
+    var exception = algorithm.GetThrownException();
+    if (exception != null)
+        logger.LogError(exception, "Optimize error");
 
-    if (state.Result.HasValue)
+    var result = algorithm.AssignmentOptimizerStateDetails?.Result;
+    if (result != null)
     {
         var filename = "result-" + DateTime.Now.ToString("ddMMyy-HHmmss");
-        var textResult = Exports.Pretty(state.Result.Value);
+        var textResult = Exports.Pretty(result);
         logger.LogInformation(textResult);
 
         await using var writer = new StreamWriter($"{filename}.txt");
         await writer.WriteAsync(textResult);
         logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), $"{filename}.txt"));
 
-        await Exports.WriteToXlsx($"{filename}.xlsx", state.Result.Value, overwrite: true);
+        await Exports.WriteToXlsx($"{filename}.xlsx", result, overwrite: true);
         var path = Path.Join(Directory.GetCurrentDirectory(), $"{filename}.xlsx");
         logger.LogInformation("Result saved: {Path}", path);
         Process.Start("explorer", path);
@@ -149,11 +157,11 @@ internal enum CtrlType
 
 public class Assignments
 {
-    public int SupervisorId { get; set; }
-    public int ReviewerId { get; set; }
+    public byte SupervisorId { get; set; }
+    public byte ReviewerId { get; set; }
 }
 
 public class ChairPerson
 {
-    public int ChairPersonId { get; set; }
+    public byte ChairPersonId { get; set; }
 }

@@ -8,15 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <None Update="Examples\chairpersons.csv">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Examples\assignments.csv">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="CsvHelper" Version="30.0.1" />
       <PackageReference Include="EPPlus" Version="7.0.6" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
@@ -25,6 +16,15 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Optimizer.Logic\Optimizer.Logic.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Examples\assignments.csv">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Examples\chairpersons.csv">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

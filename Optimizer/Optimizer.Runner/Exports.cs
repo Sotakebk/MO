@@ -6,7 +6,7 @@ namespace Optimizer.Runner;
 
 public static class Exports
 {
-    public static async Task WriteToXlsx(string fileName, Solution solution, bool overwrite = true)
+    public static async Task WriteToXlsx(string fileName, Logic.Work.AssignmentOptimization.OptimizerOutput solution, bool overwrite = true)
     {
         var colorPalette = Colors.GenerateColorPalette(30);
 
@@ -33,16 +33,16 @@ public static class Exports
                 ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Value = $"Room {roomIndex + 1}";
                 subCurrentRow++;
 
-                foreach (var assignment in classroom.Assignments)
+                foreach (var assignment in classroom.Slots)
                 {
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Value = assignment.ChairPersonId;
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Style.Fill.SetBackground(colorPalette[assignment.ChairPersonId]);
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Value = assignment.A;
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Style.Fill.SetBackground(colorPalette[assignment.A]);
 
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Value = assignment.SupervisorId;
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Style.Fill.SetBackground(colorPalette[assignment.SupervisorId]);
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Value = assignment.B;
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Style.Fill.SetBackground(colorPalette[assignment.B]);
 
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 3].Value = assignment.ReviewerId;
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 3].Style.Fill.SetBackground(colorPalette[assignment.ReviewerId]);
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 3].Value = assignment.ChairPersonId;
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 3].Style.Fill.SetBackground(colorPalette[assignment.ChairPersonId]);
                     subCurrentRow++;
                 }
 
@@ -56,16 +56,16 @@ public static class Exports
         await p.SaveAsync();
     }
 
-    public static string Pretty(Solution solution)
+    public static string Pretty(Logic.Work.AssignmentOptimization.OptimizerOutput solution)
     {
         var sb = new StringBuilder();
         foreach (var day in solution.Days)
         {
-            sb.AppendLine($"=== Day {day.DayId} ===");
+            sb.AppendLine($"=== Day {day.Id} ===");
             foreach (var classroom in day.Classrooms)
             {
-                sb.AppendLine($"== Classroom {classroom.RoomId} ==");
-                foreach (var assignment in classroom.Assignments)
+                sb.AppendLine($"== Classroom {classroom.Id} ==");
+                foreach (var assignment in classroom.Slots)
                     sb.AppendLine(assignment.ToString());
             }
 

@@ -1,17 +1,15 @@
-﻿using Optimizer.Logic.Extensions;
+﻿namespace Optimizer.Logic.Work.AssignmentOptimization.Scores;
 
-namespace Optimizer.Logic.Work.Heuristics;
-
-internal static class GeneralPeopleHeuristic
+internal static class GeneralPeopleScore
 {
     public const int MinPerfectAssignmentsPerDayCount = 6;
     public const int MaxPerfectAssignmentsPerDayCount = 9;
     public const int AcceptableMaxAssignmentsInBlockPerDay = 9;
     public const int AcceptableMaxAssignmentSpreadPerDay = 9;
 
-    internal static float CalculateScore(PartialSolution solution)
+    internal static float CalculateScore(OptimizerState state, TransformedInput tInput)
     {
-        var operation = new Operation(solution);
+        var operation = new Operation(state, tInput);
         operation.Work();
         return operation.CalculateScore();
     }
@@ -45,15 +43,13 @@ internal static class GeneralPeopleHeuristic
 
         public static Metric AssignmentGaps = Create(0.032f);
         public static Metric RoleSwitching = Create(0.018f);
-        public static Metric ChairpersonStd = Create(0.02f);
-        public static Metric UnusedChairPersons = Create(0.12f, depthDependant: true);
-    }
 
+        public static Metric ChairPersonAssignmentsLeft = Create(0.1f, depthDependant: true);
+    }
 
     private class Operation
     {
         // TODO3: Żeby obrony zaczynały się od rana (czyli mozna liczyc ile jest dziury rano mają mniejsze penalty, niż dziury wieczorem), użycie kolejnego dnia obron powinno być również penalty
-        // TODO4: Plusik za wypełnienie promotora_recenzenta i supervisora
 
         private struct PersonAssignmentBlock
         {
@@ -84,11 +80,9 @@ internal static class GeneralPeopleHeuristic
             public readonly PersonPerDayMemory[] Days;
             public int TotalAssignments;
             public int TotalChairAssignments;
-            public readonly bool Exists;
 
             public PersonMemory(int days)
             {
-                Exists = true;
                 TotalAssignments = 0;
                 TotalChairAssignments = 0;
                 Days = new PersonPerDayMemory[days];
@@ -106,20 +100,67 @@ internal static class GeneralPeopleHeuristic
 
         private readonly PersonMemory[] _peopleMemory;
         private readonly DayMemory[] _daysMemory;
-        private readonly PartialSolution _solution;
+        private readonly OptimizerState _solution;
+        private readonly TransformedInput _tInput;
 
-        public Operation(PartialSolution solution)
+        public Operation(OptimizerState solution, TransformedInput tInput)
         {
-            _peopleMemory = new PersonMemory[byte.MaxValue + 1];
+            _peopleMemory = new PersonMemory[tInput.PeopleCount];
             var daysInPartialSolution = solution.Days.Length;
             _daysMemory = new DayMemory[daysInPartialSolution];
 
-            for (var i = 0; i < solution.PeopleIds.Count; i++)
+            for (var i = 0; i < _peopleMemory.Length; i++)
             {
-                _peopleMemory[solution.PeopleIds[i]] = new PersonMemory(daysInPartialSolution);
+                _peopleMemory[i] = new PersonMemory(daysInPartialSolution);
             }
 
             _solution = solution;
+            _tInput = tInput;
+        }
+
+        private void WorkForPerson(int dIndex, int cIndex, int sIndex, int personId, bool isChairPerson = false)
+        {
+            var memory = _peopleMemory[personId];
+            _peopleMemory[personId].TotalAssignments++;
+
+            memory.Days[dIndex].FirstAssignment ??= sIndex;
+            memory.Days[dIndex].LastAssignment = sIndex;
+            if (memory.Days[dIndex].AssignmentBlocks.Count == 0)
+            {
+                memory.Days[dIndex].AssignmentBlocks.Add(new PersonAssignmentBlock()
+                {
+                    ClassroomIndex = cIndex,
+                    StartIndex = sIndex,
+                    EndIndex = sIndex,
+                    IsChairPerson = isChairPerson
+                });
+            }
+            else
+            {
+                var lastBlockIndex = memory.Days[dIndex].AssignmentBlocks.Count - 1;
+                var lastAssignmentBlock = memory.Days[dIndex].AssignmentBlocks[lastBlockIndex];
+                if (lastAssignmentBlock.EndIndex == sIndex - 1
+                    && lastAssignmentBlock.ClassroomIndex == cIndex
+                    && lastAssignmentBlock.IsChairPerson == isChairPerson)
+                {
+                    // if block is continous, continue
+                    lastAssignmentBlock.EndIndex = sIndex;
+                    memory.Days[dIndex].AssignmentBlocks[lastBlockIndex] = lastAssignmentBlock;
+                }
+                else
+                {
+                    // start new block
+                    memory.Days[dIndex].AssignmentBlocks.Add(new PersonAssignmentBlock()
+                    {
+                        ClassroomIndex = cIndex,
+                        StartIndex = sIndex,
+                        EndIndex = sIndex,
+                        IsChairPerson = isChairPerson
+                    });
+                }
+
+                memory.Days[dIndex].TotalAssignments++;
+            }
         }
 
         public void Work()
@@ -127,68 +168,29 @@ internal static class GeneralPeopleHeuristic
             for (var dIndex = 0; dIndex < _solution.Days.Length; dIndex++)
             {
                 var solutionDay = _solution.Days[dIndex];
-                for (var aIndex = 0; aIndex < solutionDay.SlotCount; aIndex++)
+                var transformedDay = _tInput.Days[dIndex];
+                var slotsInDay = transformedDay.MaxSlotsInDay;
+                for (var sIndex = 0; sIndex < slotsInDay; sIndex++)
                 {
                     for (int cIndex = 0; cIndex < solutionDay.Classrooms.Length; cIndex++)
                     {
                         // chronologically
-                        var assignment = solutionDay.Classrooms[cIndex].Assignments[aIndex];
+                        var transformedClassroom = transformedDay.Classrooms[dIndex];
+                        var classroom = solutionDay.Classrooms[cIndex];
+                        if (classroom.Slots.Length <= sIndex) // less slots in class than in day
+                            continue;
 
-                        void WorkForPerson(int personId, bool isChairPerson = false)
-                        {
-                            var memory = _peopleMemory[personId];
-                            _peopleMemory[personId].TotalAssignments++;
-                            if (isChairPerson)
-                                _peopleMemory[personId].TotalChairAssignments++;
-
-                            memory.Days[dIndex].FirstAssignment ??= aIndex;
-                            memory.Days[dIndex].LastAssignment = aIndex;
-                            if (memory.Days[dIndex].AssignmentBlocks.Count == 0)
-                            {
-                                memory.Days[dIndex].AssignmentBlocks.Add(new PersonAssignmentBlock()
-                                {
-                                    ClassroomIndex = cIndex,
-                                    StartIndex = aIndex,
-                                    EndIndex = aIndex,
-                                    IsChairPerson = isChairPerson
-                                });
-                            }
-                            else
-                            {
-                                var lastBlockIndex = memory.Days[dIndex].AssignmentBlocks.Count - 1;
-                                var lastAssignmentBlock = memory.Days[dIndex].AssignmentBlocks[lastBlockIndex];
-                                if (lastAssignmentBlock.EndIndex == aIndex - 1
-                                    && lastAssignmentBlock.ClassroomIndex == cIndex
-                                    && lastAssignmentBlock.IsChairPerson == isChairPerson)
-                                {
-                                    // if block is continous, continue
-                                    lastAssignmentBlock.EndIndex = aIndex;
-                                    memory.Days[dIndex].AssignmentBlocks[lastBlockIndex] = lastAssignmentBlock;
-                                }
-                                else
-                                {
-                                    // start new block
-                                    memory.Days[dIndex].AssignmentBlocks.Add(new PersonAssignmentBlock()
-                                    {
-                                        ClassroomIndex = cIndex,
-                                        StartIndex = aIndex,
-                                        EndIndex = aIndex,
-                                        IsChairPerson = isChairPerson
-                                    });
-                                }
-
-                                memory.Days[dIndex].TotalAssignments++;
-                            }
-                        }
+                        var assignment = classroom.Slots[sIndex];
 
                         if (assignment.HasValuesSet())
                         {
-                            WorkForPerson(assignment.SupervisorId);
-                            WorkForPerson(assignment.ReviewerId);
-                            WorkForPerson(assignment.ChairPersonId, isChairPerson: true);
+                            var chairPersonId = transformedClassroom.Slots[sIndex].ChairPersonId;
+                            WorkForPerson(dIndex, cIndex, sIndex, assignment.A);
+                            WorkForPerson(dIndex, cIndex, sIndex, assignment.B);
+                            WorkForPerson(dIndex, cIndex, sIndex, chairPersonId, isChairPerson: true);
                             _daysMemory[dIndex].TotalAssignmentsFilled++;
-                            _daysMemory[dIndex].FirstAssignment ??= aIndex;
-                            _daysMemory[dIndex].LastAssignment = aIndex;
+                            _daysMemory[dIndex].FirstAssignment ??= sIndex;
+                            _daysMemory[dIndex].LastAssignment = sIndex;
                         }
                     }
                 }
@@ -197,23 +199,22 @@ internal static class GeneralPeopleHeuristic
 
         public float CalculateScore()
         {
-            var depthPercentage = 1.0f * _solution.CurrentDepth / _solution.MaxDepth;
+            var depthPercentage = 1.0f * _solution.Depth / _solution.MaxDepth;
             var sum = 0f;
             var personMetrics = new float[Metric.Count];
 
-            var chairPersonStdDev = _peopleMemory.Where(p => p.TotalChairAssignments > 0).Select(p => (float)p.TotalChairAssignments).StandardDeviation();
-            sum -= chairPersonStdDev.ApplyMetric(Metric.ChairpersonStd, depthPercentage);
+            //var unassignedChairPersons = (float)_solution.ChairPersonAppearanceCount.Count(c => c.Value == 0);
+            //sum -= unassignedChairPersons.ApplyMetric(Metric.UnusedChairPersons, depthPercentage);
 
-            var unassignedChairPersons = (float)_solution.ChairPersonAppearanceCount.Count(c => c.Value == 0);
-            sum -= unassignedChairPersons.ApplyMetric(Metric.UnusedChairPersons, depthPercentage);
-
-            for (var personIndex = 0; personIndex <= byte.MaxValue; personIndex++)
+            for (var personIndex = 0; personIndex < _tInput.PeopleCount; personIndex++)
             {
                 for (var i = 0; i < Metric.Count; i++)
                     personMetrics[i] = 0;
                 var person = _peopleMemory[personIndex];
-                if (!person.Exists)
-                    continue;
+
+                if (_tInput.IsAssignedAsChairPersonLookupTable[personIndex])
+                    personMetrics[Metric.ChairPersonAssignmentsLeft.Id] -= _solution.AssignmentsToPlaceLeftForPerson[personIndex];
+
                 for (var dayIndex = 0; dayIndex < person.Days.Length; dayIndex++)
                 {
                     var day = person.Days[dayIndex];
@@ -225,7 +226,8 @@ internal static class GeneralPeopleHeuristic
                         personMetrics[Metric.VacationDay.Id] += 10.0f;
                         // personMetrics[Metric.VacationDay.Id] += 1.0f * _solution.Days[dayIndex].SlotCount;
                         continue;
-                    }else
+                    }
+                    else
                         personMetrics[Metric.VacationDay.Id] -= 10.0f;
 
                     // penaly for evening starting
@@ -237,7 +239,6 @@ internal static class GeneralPeopleHeuristic
                     // penalty for having assignments away from a perfect range
                     // having one assignment in a day makes no sense
                     // having too many is overworking
-
 
                     if (assignmentsTotal <= MaxPerfectAssignmentsPerDayCount)
                         personMetrics[Metric.DailyAssignmentsCount.Id] += assignmentsTotal;
@@ -273,11 +274,11 @@ internal static class GeneralPeopleHeuristic
                                 else
                                     personMetrics[Metric.SwitchingClassesByOthers.Id] -= 1;
 
-                                 // penalty for switching classes right between two assignments
-//                                 if (assignmentBlock.EndIndex + 1 == block2.StartIndex)
-//                                 {
-//                                     personMetrics[Metric.SwitchingClasses.Id] -= 1.2;
-//                                 }
+                                // penalty for switching classes right between two assignments
+                                //                                 if (assignmentBlock.EndIndex + 1 == block2.StartIndex)
+                                //                                 {
+                                //                                     personMetrics[Metric.SwitchingClasses.Id] -= 1.2;
+                                //                                 }
                             }
 
                             // penalty for switching role
@@ -302,9 +303,9 @@ internal static class GeneralPeopleHeuristic
     }
 }
 
-static class MetricExtensions
+internal static class MetricExtensions
 {
-    public static float ApplyMetric(this float value, GeneralPeopleHeuristic.Metric metric, float percentage)
+    public static float ApplyMetric(this float value, GeneralPeopleScore.Metric metric, float percentage)
     {
         if (metric.DepthDependant)
             return value * metric.Factor * percentage;
