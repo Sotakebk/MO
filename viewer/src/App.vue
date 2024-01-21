@@ -1,21 +1,23 @@
 <template>
-  <TimeTable :entries="entries" :slots="slots" />
+  <!--  <TimeTable :entries="entries" :slots="slots" />-->
+  <TimeTableNew :entries="entries" :chairpersons="chairpersons" />
 </template>
 
 <script lang="ts">
 import { defineComponent, onMounted, ref } from "vue";
-import TimeTable from "./components/time-table.vue";
 import { Entry, Slot } from "@/types/data-types";
 import { fakerPL } from "@faker-js/faker";
+import TimeTableNew from "@/components/time-table-new.vue";
 
 export default defineComponent({
   name: "App",
   components: {
-    TimeTable,
+    TimeTableNew,
   },
   setup() {
     const slots = ref([] as Slot[][][]);
     const entries = ref([] as Entry[]);
+    const chairpersons = ref(["Bereta", "Białas", "Płażek", "Koroński"]);
 
     onMounted(() => {
       const days = 3;
@@ -47,6 +49,7 @@ export default defineComponent({
     return {
       slots,
       entries,
+      chairpersons,
     };
   },
 });
@@ -59,5 +62,17 @@ export default defineComponent({
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
+}
+
+html {
+  font-size: 12px;
+}
+
+.v-col {
+  max-width: unset !important;
+}
+
+.v-col-auto {
+  max-width: unset !important;
 }
 </style>

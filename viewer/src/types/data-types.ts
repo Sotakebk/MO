@@ -1,5 +1,21 @@
 import { fakerPL } from "@faker-js/faker";
 
+export class Day {
+  rooms: Room[];
+
+  constructor() {
+    this.rooms = [];
+  }
+}
+
+export class Room {
+  slots: Slot[];
+
+  constructor() {
+    this.slots = [];
+  }
+}
+
 export class Slot {
   chairPerson: string | null;
   entry: Entry | null;

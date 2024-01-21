@@ -1,8 +1,11 @@
 <script lang="ts">
+/* eslint-disable vue/no-mutating-props */
 import { PropType } from "vue";
 import { Slot } from "@/types/data-types";
+import CustomField from "@/components/custom-field.vue";
 
 export default {
+  components: { CustomField },
   props: {
     selected: {
       type: Boolean,
@@ -13,30 +16,46 @@ export default {
       type: Object as PropType<Slot>,
       required: true,
     },
+    showChairperson: {
+      type: Boolean,
+      requireD: false,
+      default: false,
+    },
   },
 };
 </script>
 
 <template>
   <v-card
-    :elevation="selected ? 12 : 2"
+    :variant="selected ? 'outlined' : 'elevated'"
     class=""
     style="cursor: pointer"
-    width="256"
-    height="120"
+    width="296"
   >
-    <v-card-text class="d-flex flex-column align-start justify-center h-100">
-      <p>
-        <v-icon class="pb-1 mr-1">mdi-account-tie</v-icon>{{ item.chairPerson }}
-      </p>
-      <div v-if="item.entry" class="mt-2">
-        <p class="text-center w-100">{{ item.entry.titleName }}</p>
-        <p><v-icon>mdi-account-star</v-icon>{{ item.entry.supervisorId }}</p>
-        <p><v-icon>mdi-account-check</v-icon>{{ item.entry.reviewerId }}</p>
-      </div>
-      <div v-else class="text-center w-100">
-        <p><i>[ Brak ]</i></p>
-      </div>
+    <v-card-text
+      class="d-flex flex-column align-start justify-center h-100 py-1"
+    >
+      <custom-field
+        v-if="showChairperson"
+        class="text-center"
+        :value="item?.chairPerson"
+        icon="mdi-account-tie"
+      ></custom-field>
+      <!--      <custom-field-->
+      <!--        class="text-center mt-2"-->
+      <!--        :value="item.entry?.titleName"-->
+      <!--        icon="mdi-format-title"-->
+      <!--      ></custom-field>-->
+      <custom-field
+        class="text-center"
+        :value="item.entry?.supervisorId"
+        icon="mdi-account-star"
+      ></custom-field>
+      <custom-field
+        class="text-center"
+        :value="item.entry?.reviewerId"
+        icon="mdi-account-check"
+      ></custom-field>
     </v-card-text>
   </v-card>
 </template>
