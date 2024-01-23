@@ -56,31 +56,31 @@ public class Solution
                 TotalCount = group.Count()
             })).ToArray();
 
-        // Days
-        input.Days = _defenseInfos.Values
-            .SelectMany(defenseInfo => defenseInfo
-                .GroupBy(defenseSlot => defenseSlot.DayId)
-                .Select(group => new InputDay
-                {
-                    Id = group.Key,
-                    Classrooms = group
-                        .GroupBy(defenseSlot => defenseSlot.ClassroomId)
-                        .Select(classroomGroup => new InputClassroom(classroomGroup.Key, slots: 0)
-                        {
-                            InputSlots = classroomGroup
-                                .Select(defenseSlot => new InputSlot
-                                {
-                                    Preferences = new[]
-                                    {
-                                        new InputSlotPreference
-                                        {
-                                            PersonId = defenseSlot.ReviewerId,
-                                            PreferenceType = PreferenceType.Preferred
-                                        }
-                                    }
-                                }).ToArray()
-                        }).ToArray()
-                })).ToArray();
+        // // Days
+        // input.Days = _defenseInfos.Values
+        //     .SelectMany(defenseInfo => defenseInfo
+        //         .GroupBy(defenseSlot => defenseSlot.DayId)
+        //         .Select(group => new InputDay
+        //         {
+        //             Id = group.Key,
+        //             Classrooms = group
+        //                 .GroupBy(defenseSlot => defenseSlot.ClassroomId)
+        //                 .Select(classroomGroup => new InputClassroom(classroomGroup.Key, slots: 0)
+        //                 {
+        //                     InputSlots = classroomGroup
+        //                         .Select(defenseSlot => new InputSlot
+        //                         {
+        //                             Preferences = new[]
+        //                             {
+        //                                 new InputSlotPreference
+        //                                 {
+        //                                     PersonId = defenseSlot.ReviewerId,
+        //                                     PreferenceType = PreferenceType.Preferred
+        //                                 }
+        //                             }
+        //                         }).ToArray()
+        //                 }).ToArray()
+        //         })).ToArray();
 
         return input;
     }
