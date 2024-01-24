@@ -32,19 +32,19 @@ internal static class GeneralPeopleScore
 
         public static readonly Metric[] Metrics = new Metric[16];
 
-        public static Metric VacationDay = Create(0.001f);
-        public static Metric EveningStarting = Create(0.00f, depthDependant: true);
-        public static Metric DailyAssignmentsCount = Create(0.25f);
-        public static Metric DailyOverspread = Create(0.01f);
+        public static Metric VacationDay = Create(0.0001f);
+        public static Metric EveningStarting = Create(0.00001f, depthDependant: true);
+        public static Metric DailyAssignmentsCount = Create(0.3f);
+        public static Metric DailyOverspread = Create(0.9f);
         public static Metric SubsequentAssignmentsCount = Create(0.01f);
 
-        public static Metric SwitchingClassesByChairPerson = Create(0.02f);
+        public static Metric SwitchingClassesByChairPerson = Create(0.01f);
         public static Metric SwitchingClassesByOthers = Create(0.01f);
 
         public static Metric AssignmentGaps = Create(0.032f);
-        public static Metric RoleSwitching = Create(0.018f);
+        public static Metric RoleSwitching = Create(0.0f);
 
-        public static Metric ChairPersonAssignmentsLeft = Create(0.1f, depthDependant: true);
+        public static Metric ChairPersonAssignmentsLeft = Create(1f, depthDependant: true);
     }
 
     private class Operation
@@ -175,7 +175,7 @@ internal static class GeneralPeopleScore
                     for (int cIndex = 0; cIndex < solutionDay.Classrooms.Length; cIndex++)
                     {
                         // chronologically
-                        var transformedClassroom = transformedDay.Classrooms[dIndex];
+                        var transformedClassroom = transformedDay.Classrooms[cIndex];
                         var classroom = solutionDay.Classrooms[cIndex];
                         if (classroom.Slots.Length <= sIndex) // less slots in class than in day
                             continue;
@@ -212,8 +212,10 @@ internal static class GeneralPeopleScore
                     personMetrics[i] = 0;
                 var person = _peopleMemory[personIndex];
 
-                if (_tInput.IsAssignedAsChairPersonLookupTable[personIndex])
-                    personMetrics[Metric.ChairPersonAssignmentsLeft.Id] -= _solution.AssignmentsToPlaceLeftForPerson[personIndex];
+
+                var assignmentsNotAsChairperson = _tInput.PersonWorkedAssignmentsAsNotAsChairperson[personIndex];
+                if (_tInput.IsAssignedAsChairPersonLookupTable[personIndex] && assignmentsNotAsChairperson != 0)
+                    personMetrics[Metric.ChairPersonAssignmentsLeft.Id] -= _solution.AssignmentsToPlaceLeftForPerson[personIndex] / assignmentsNotAsChairperson;
 
                 for (var dayIndex = 0; dayIndex < person.Days.Length; dayIndex++)
                 {

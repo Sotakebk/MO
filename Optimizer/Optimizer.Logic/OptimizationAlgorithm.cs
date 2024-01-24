@@ -87,15 +87,15 @@ public class OptimizationAlgorithm
 
     private void FindSolution(Input input)
     {
-        var focts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-        var firstOptimizer = new ChairPersonOptimizer(input, focts.Token);
+        var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+        var firstOptimizer = new ChairPersonOptimizer(input, cancellationTokenSource.Token);
         ChairPersonOptimizerStateDetails = firstOptimizer.StateDetails;
         State = OptimizationAlgorithmState.ChairPersonOptimization;
         
         // immediately stop after finding the first solution
         ChairPersonOptimizerStateDetails.OnBetterSolutionFound += (_, _) =>
         {
-            focts.Cancel();
+            cancellationTokenSource.Cancel();
         };
         firstOptimizer.Optimize();
 

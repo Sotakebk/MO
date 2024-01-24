@@ -10,13 +10,6 @@ using Optimizer.Runner;
 
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-using var reader = new StreamReader(Path.Combine("Examples", "assignments.csv"));
-using var reader2 = new StreamReader(Path.Combine("Examples", "chairpersons.csv"));
-using var csv1 = new CsvReader(reader, CultureInfo.InvariantCulture);
-using var csv2 = new CsvReader(reader2, CultureInfo.InvariantCulture);
-var records1 = csv1.GetRecords<Assignments>();
-var records2 = csv2.GetRecords<ChairPerson>();
-
 using var loggerFactory = LoggerFactory.Create(builder =>
 {
     builder.AddSimpleConsole(options =>
@@ -28,52 +21,28 @@ using var loggerFactory = LoggerFactory.Create(builder =>
     });
     builder.SetMinimumLevel(LogLevel.Trace);
 });
+
 var logger = loggerFactory.CreateLogger<Program>();
 
-Input input = new Input()
-{
-    AvailableChairPersonIds = records2.Select(row => row.ChairPersonId).ToArray(),
-    DefensesToAssign = records1.GroupBy(r => (reviewer: r.ReviewerId, supervisor: r.SupervisorId))
-        .Select(group =>
-            new InputCombination()
-            {
-                ReviewerId = group.Key.reviewer,
-                PromoterId = group.Key.supervisor,
-                TotalCount = group.Count()
-            }).ToArray(),
-    Days = new[]
-    {
-        new InputDay()
-        {
-            Id = 1,
-            Classrooms = new[]
-            {
-                new InputClassroom(0, slots: 17, 8, 9),
-                new InputClassroom(1, slots: 16, 8, 8),
-            },
-        },
-        new InputDay()
-        {
-            Id = 2,
-            Classrooms = new[]
-            {
-                new InputClassroom(0, slots: 16, 8, 8),
-                new InputClassroom(1, slots: 16, 8, 8),
-            },
-        },
-    },
-};
+var solution = Imports.ImportData(
+    new FileInfo("Input/Obrony.xlsx"),
+    new FileInfo("Input/Przewodniczacy.xlsx"),
+    new FileInfo("Input/Sale.xlsx"),
+    new FileInfo("Input/Nieobecnosci.xlsx")
+);
+
+// var date = ConsoleHelper.GetDateTime();
+var date = new DateOnly(2024, 1, 29);
+
+var input = solution.GetOptimizerInput(date);
 
 var ct = new CancellationTokenSource();
 
 var algorithm = OptimizationAlgorithm.Optimize(input, ct.Token, loggerFactory);
 
-var operationsLimit = 100000000;
-var timeLimit = TimeSpan.FromMinutes(60);
-
+var timeLimit = TimeSpan.FromSeconds(20);
 var timeStart = DateTime.Now;
-
-logger.LogInformation($"Start: operationsLimit: {operationsLimit}, timeLimit: {timeLimit}");
+logger.LogInformation($"Start:  timeLimit: {timeLimit}");
 
 IOptimizerStateDetails? GetActiveOptimizerStateDetails()
 {
@@ -88,7 +57,8 @@ IOptimizerStateDetails? GetActiveOptimizerStateDetails()
 void LogInfo()
 {
     var state = GetActiveOptimizerStateDetails();
-    logger.LogInformation($"ops: {state?.OperationsDone:D10}, evs: {state?.Evaluations}, dead-ends: {state?.DeadEnds}, partial score: {state?.PartialScore}, best score:{state?.ResultScore:F5}, depth: {state?.CurrentDepth} ({(100f * state.CurrentDepth / (float)state.MaxDepth):F}%, level: {(100 * state.CurrentDepthCompleteness):F}%), pds: {state.PercentDomainSeen:F5}%");
+    logger.LogInformation(
+        $"ops: {state?.OperationsDone:D10}, evs: {state?.Evaluations}, dead-ends: {state?.DeadEnds}, partial score: {state?.PartialScore}, best score:{state?.ResultScore:F5}, depth: {state?.CurrentDepth} ({(100f * state?.CurrentDepth / state?.MaxDepth):F}%, level: {(100 * state?.CurrentDepthCompleteness):F}%), pds: {state?.PercentDomainSeen:F5}%");
 }
 
 bool ShouldStopDueToTimeLimit()
@@ -102,10 +72,7 @@ bool ShouldStopDueToTimeLimit()
     return false;
 }
 
-Console.CancelKeyPress += (sender, eventArgs) =>
-{
-    Finish().RunSynchronously();
-};
+Console.CancelKeyPress += (sender, eventArgs) => { Finish().RunSynchronously(); };
 
 while (algorithm.IsWorking && !ShouldStopDueToTimeLimit())
 {

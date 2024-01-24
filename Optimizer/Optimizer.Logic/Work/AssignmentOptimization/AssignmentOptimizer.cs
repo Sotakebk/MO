@@ -157,13 +157,22 @@ internal sealed class AssignmentOptimizer : BaseOptimizer<OptimizerState, Optimi
              tempProportionForPrinting *= persistence;
          }*/
 
-        
-        //var depth = Math.Max(0, state.Depth - state.MaxDepth + 15);
+
+        var percentage = state.Depth + 1f / (float)state.MaxDepth;
+        // var depth = Math.Max(0, state.Depth - state.MaxDepth + 15);
         //var proportion = state.Depth / (float)state.MaxDepth;
         //var persistence = state.Depth / (float)state.MaxDepth;
 
         //return (depth, proportion, persistence);
+        // return (depth, state.Depth < 40 ? 0 : 0.5f, 0.5f);
 
-        return (0, 0, 0);
+        return (0, ExponentialPercentage(percentage), ExponentialPercentage(percentage));
+        // return (0, 0, 0);
+    }
+
+
+    float ExponentialPercentage(float percentage, float a = 0.01f, float t = 1.0f)
+    {
+        return MathF.Pow(a * (1.0f / a), percentage * t);
     }
 }

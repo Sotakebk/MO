@@ -5,6 +5,7 @@ internal class TransformedInput
     public byte[] AllPeopleIds;
     public int PeopleCount;
     public Dictionary<byte, int> PersonWorkedAssignmentsAsAnyRoleCount;
+    public int[] PersonWorkedAssignmentsAsNotAsChairperson;
     public bool[] IsAssignedAsChairPersonLookupTable;
     public TransformedDay[] Days;
 
@@ -19,6 +20,12 @@ internal class TransformedInput
         PeopleCount = AllPeopleIds.Length;
 
         PersonWorkedAssignmentsAsAnyRoleCount = new(chairPersonOptimizerOutput.PersonWorkedAssignmentsAsAnyRoleCount);
+
+        PersonWorkedAssignmentsAsNotAsChairperson = new int [PeopleCount];
+        for (var i = 0; i < PeopleCount; i++) 
+            PersonWorkedAssignmentsAsNotAsChairperson[i] = input.DefensesToAssign.Where(combination => combination.PromoterId == i || combination.ReviewerId == i).Sum(c => c.TotalCount);
+
+
         IsAssignedAsChairPersonLookupTable = new bool[PeopleCount];
         for (var i = 0; i < PeopleCount; i++)
             IsAssignedAsChairPersonLookupTable[i] = chairPersonOptimizerOutput.Days.Any(d =>

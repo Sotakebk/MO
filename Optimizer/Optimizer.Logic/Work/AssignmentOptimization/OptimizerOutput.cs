@@ -56,14 +56,23 @@ public struct SolutionClassroom
 
 public struct SolutionSlot
 {
-    public int A { get; set; }
-    public int B { get; set; }
+    public int? A { get; set; } 
+    public int? B { get; set; }
     public int ChairPersonId { get; set; }
 
     internal SolutionSlot(Slot slot, TransformedSlot tSlot)
     {
-        A = slot.A;
-        B = slot.B;
+        if(slot.HasValuesSet())
+        {
+            A = slot.A;
+            B = slot.B;
+        }
+        else
+        {
+            A = null;
+            B = null;
+        }
+
         ChairPersonId = tSlot.ChairPersonId;
     }
 

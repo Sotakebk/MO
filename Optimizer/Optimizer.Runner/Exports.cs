@@ -35,11 +35,14 @@ public static class Exports
 
                 foreach (var assignment in classroom.Slots)
                 {
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Value = assignment.A;
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Style.Fill.SetBackground(colorPalette[assignment.A]);
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Value = assignment.A?.ToString();
+                    if (assignment.A.HasValue)
+                        ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 1].Style.Fill.SetBackground(colorPalette[assignment.A.Value]);
 
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Value = assignment.B;
-                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Style.Fill.SetBackground(colorPalette[assignment.B]);
+                    ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Value = assignment.B?.ToString();
+
+                    if (assignment.B.HasValue)
+                        ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 2].Style.Fill.SetBackground(colorPalette[assignment.B.Value]);
 
                     ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 3].Value = assignment.ChairPersonId;
                     ws.Cells[currentRow + subCurrentRow, roomIndex * 3 + 3].Style.Fill.SetBackground(colorPalette[assignment.ChairPersonId]);

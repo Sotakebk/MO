@@ -23,24 +23,23 @@ public class InputDay
 public class InputClassroom
 {
     public byte Id { get; set; }
-    public int[] BlockLengths { get; set; }
+    public byte[] BlockLengths { get; set; }
     public InputSlot[] InputSlots { get; set; }
 
-    public InputClassroom(byte id, byte slots, params int[] blockLengths)
+    public InputClassroom(byte id, params byte[] blockLengths)
     {
         Id = id;
+        var slots = blockLengths.Sum(b => b);
         InputSlots = new InputSlot[slots];
         for (var i = 0; i < slots; i++)
             InputSlots[i] = new InputSlot();
-        if (slots != blockLengths.Sum())
-            throw new("slot count not equal to sum of block lengths");
         BlockLengths = blockLengths;
     }
 }
 
 public struct InputSlot
 {
-    public InputSlotPreference[] Preferences = Array.Empty<InputSlotPreference>();
+    public List<InputSlotPreference> Preferences = new();
 
     public InputSlot()
     {
