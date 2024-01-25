@@ -125,7 +125,7 @@ await AnsiConsole
             if (result != null)
             {
                 ctx.Status("Zapisywanie wyników");
-                var filename = "result-" + DateTime.Now.ToString("ddMMyy-HHmmss");
+                var filename = "Plan Obron-" + DateTime.Now.ToString("HHmmss-ddMMyy");
                 await Exports.WriteToXlsx(solution, $"{filename}.xlsx", result, overwrite: true);
                 var path = Path.Join(Directory.GetCurrentDirectory(), $"{filename}.xlsx");
                 logger.LogInformation("Result saved: {Path}", path);
