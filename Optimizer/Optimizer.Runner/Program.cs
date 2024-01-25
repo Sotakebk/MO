@@ -104,7 +104,7 @@ async Task Finish()
         await writer.WriteAsync(textResult);
         logger.LogInformation("Result saved: {Path}", Path.Join(Directory.GetCurrentDirectory(), $"{filename}.txt"));
 
-        await Exports.WriteToXlsx($"{filename}.xlsx", result, overwrite: true);
+        await Exports.WriteToXlsx(solution, $"{filename}.xlsx", result, overwrite: true);
         var path = Path.Join(Directory.GetCurrentDirectory(), $"{filename}.xlsx");
         logger.LogInformation("Result saved: {Path}", path);
         Process.Start("explorer", path);

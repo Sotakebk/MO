@@ -84,7 +84,6 @@ public class Solution
         }
     }
 
-
     private class DefenseInfo
     {
         public DefenseInfo(string student, string title, byte supervisorId, byte reviewerId)
@@ -129,6 +128,58 @@ public class Solution
             value.Add(timeSpan);
         else
             _personExclusions[key] = new List<TimePeriod> { timeSpan };
+    }
+
+    public class FullDefenseInfo
+    {
+        public FullDefenseInfo()
+        {
+            Student = "";
+            Title = "";
+            Supervisor = "";
+            Reviewer = "";
+            Chairperson = "";
+        }
+        public FullDefenseInfo(string student, string title, string supervisor, string reviewer, string chairperson)
+        {
+            Student = student;    
+            Title = title;
+            Supervisor = supervisor;
+            Reviewer = reviewer;
+            Chairperson = chairperson;
+        }
+        public string Student { get; set; }
+        public string Title { get; set; }
+        public string Supervisor { get; set; }
+        public string Reviewer { get; set; }
+        public string Chairperson { get; set; }
+    }
+
+    public FullDefenseInfo GetFullDefenseInfo(int A, int B, int ChairPersonId)
+    {
+        bool defaultOrder = true;
+        var Astr = _persons.First(x => x.Value == A).Key;
+        var Bstr = _persons.First(x => x.Value == B).Key;
+        var partialDefenseInfo = _defenseInfos.Where(x => x.SupervisorId == A && x.ReviewerId == B).Take(1).FirstOrDefault();
+        if (partialDefenseInfo == default(DefenseInfo))
+        {
+            defaultOrder = false;
+
+            partialDefenseInfo = _defenseInfos.Where(x => x.SupervisorId == B && x.ReviewerId == A).Take(1).FirstOrDefault();
+            if (partialDefenseInfo == default(DefenseInfo))
+                throw new UserFriendlyException(
+                    "No defense with id combination " + Astr + " " + Bstr,
+                    "Nie ma obrony dla kombinacji id " + Astr + " " + Bstr
+                );
+        }
+
+        return new FullDefenseInfo(
+            partialDefenseInfo.Student,
+            partialDefenseInfo.Title,
+            defaultOrder ? Astr : Bstr,
+            defaultOrder ? Bstr : Astr,
+            _persons.First(x => x.Value == ChairPersonId).Key
+        );
     }
 }
 
