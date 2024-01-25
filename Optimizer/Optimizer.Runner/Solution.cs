@@ -140,14 +140,16 @@ public class Solution
             Reviewer = "";
             Chairperson = "";
         }
+
         public FullDefenseInfo(string student, string title, string supervisor, string reviewer, string chairperson)
         {
-            Student = student;    
+            Student = student;
             Title = title;
             Supervisor = supervisor;
             Reviewer = reviewer;
             Chairperson = chairperson;
         }
+
         public string Student { get; set; }
         public string Title { get; set; }
         public string Supervisor { get; set; }
@@ -155,48 +157,32 @@ public class Solution
         public string Chairperson { get; set; }
     }
 
-    public FullDefenseInfo GetFullDefenseInfo(int A, int B, int ChairPersonId)
+    public FullDefenseInfo GetFullDefenseInfo(int aId, int bId, int chairPersonId)
     {
-        bool defaultOrder = true;
-        var Astr = _persons.First(x => x.Value == A).Key;
-        var Bstr = _persons.First(x => x.Value == B).Key;
-        var partialDefenseInfo = _defenseInfos.Where(x => x.SupervisorId == A && x.ReviewerId == B).Take(1).FirstOrDefault();
-        if (partialDefenseInfo == default(DefenseInfo))
-        {
-            defaultOrder = false;
+        var aName = _persons.First(x => x.Value == aId).Key;
+        var bName = _persons.First(x => x.Value == bId).Key;
+        var partialDefenseInfo = _defenseInfos.FirstOrDefault(x => 
+            (x.SupervisorId == aId && x.ReviewerId == bId) ||
+            (x.SupervisorId == bId && x.ReviewerId == aId));
 
-            partialDefenseInfo = _defenseInfos.Where(x => x.SupervisorId == B && x.ReviewerId == A).Take(1).FirstOrDefault();
-            if (partialDefenseInfo == default(DefenseInfo))
-                throw new UserFriendlyException(
-                    "No defense with id combination " + Astr + " " + Bstr,
-                    "Nie ma obrony dla kombinacji id " + Astr + " " + Bstr
-                );
+        if (partialDefenseInfo is null)
+        {
+            throw new UserFriendlyException(
+                "No defense with id combination " + aName + " " + bName,
+                "Nie ma obrony dla kombinacji id " + aName + " " + bName
+            );
         }
+
+        var defaultOrder = partialDefenseInfo.SupervisorId == aId;
+
+        _defenseInfos.Remove(partialDefenseInfo);
 
         return new FullDefenseInfo(
             partialDefenseInfo.Student,
             partialDefenseInfo.Title,
-            defaultOrder ? Astr : Bstr,
-            defaultOrder ? Bstr : Astr,
-            _persons.First(x => x.Value == ChairPersonId).Key
+            defaultOrder ? aName : bName,
+            defaultOrder ? bName : aName,
+            _persons.First(x => x.Value == chairPersonId).Key
         );
-    }
-}
-
-public static class ListExtensions
-{
-    private static readonly Random Rng = new();
-
-    public static IList<T> Shuffle<T>(this IList<T> list)
-    {
-        var n = list.Count;
-        while (n > 1)
-        {
-            n--;
-            var k = Rng.Next(n + 1);
-            (list[k], list[n]) = (list[n], list[k]);
-        }
-
-        return list;
     }
 }
