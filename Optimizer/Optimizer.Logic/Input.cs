@@ -1,28 +1,60 @@
-﻿namespace Optimizer.Logic;
+namespace Optimizer.Logic;
 
-public struct Input
+public class Input
 {
-    public int[] ChairPersonIds;
-    public InputCombination[] Combinations;
-    public InputDay[] Days;
+    public byte[] AvailableChairPersonIds { get; set; } = Array.Empty<byte>();
+    public InputCombination[] DefensesToAssign { get; set; } = Array.Empty<InputCombination>();
+    public InputDay[] Days { get; set; } = Array.Empty<InputDay>();
 }
 
-public struct InputCombination
+public class InputCombination
 {
-    public int ReviewerId;
-    public int PromoterId;
-    public int TotalCount;
+    public byte ReviewerId { get; set; }
+    public byte PromoterId { get; set; }
+    public int TotalCount { get; set; }
 }
 
-public struct InputDay
+public class InputDay
 {
-    public int Id;
-    public InputVacantBlock[] VacantBlocks;
+    public byte Id { get; set; }
+    public InputClassroom[] Classrooms { get; set; } = Array.Empty<InputClassroom>();
 }
 
-public struct InputVacantBlock
+public class InputClassroom
 {
-    public int RoomId;
-    public int Offset;
-    public int SlotCount;
+    public byte Id { get; set; }
+    public byte[] BlockLengths { get; set; }
+    public InputSlot[] InputSlots { get; set; }
+
+    public InputClassroom(byte id, params byte[] blockLengths)
+    {
+        Id = id;
+        var slots = blockLengths.Sum(b => b);
+        InputSlots = new InputSlot[slots];
+        for (var i = 0; i < slots; i++)
+            InputSlots[i] = new InputSlot();
+        BlockLengths = blockLengths;
+    }
+}
+
+public struct InputSlot
+{
+    public List<InputSlotPreference> Preferences = new();
+
+    public InputSlot()
+    {
+    }
+}
+
+public struct InputSlotPreference
+{
+    public byte PersonId;
+    public PreferenceType PreferenceType;
+}
+
+public enum PreferenceType : byte
+{
+    Preferred,
+    Undesired,
+    NotAllowed,
 }
