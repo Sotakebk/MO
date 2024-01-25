@@ -84,7 +84,6 @@ public class Solution
         }
     }
 
-
     private class DefenseInfo
     {
         public DefenseInfo(string student, string title, byte supervisorId, byte reviewerId)
@@ -130,22 +129,60 @@ public class Solution
         else
             _personExclusions[key] = new List<TimePeriod> { timeSpan };
     }
-}
 
-public static class ListExtensions
-{
-    private static readonly Random Rng = new();
-
-    public static IList<T> Shuffle<T>(this IList<T> list)
+    public class FullDefenseInfo
     {
-        var n = list.Count;
-        while (n > 1)
+        public FullDefenseInfo()
         {
-            n--;
-            var k = Rng.Next(n + 1);
-            (list[k], list[n]) = (list[n], list[k]);
+            Student = "";
+            Title = "";
+            Supervisor = "";
+            Reviewer = "";
+            Chairperson = "";
         }
 
-        return list;
+        public FullDefenseInfo(string student, string title, string supervisor, string reviewer, string chairperson)
+        {
+            Student = student;
+            Title = title;
+            Supervisor = supervisor;
+            Reviewer = reviewer;
+            Chairperson = chairperson;
+        }
+
+        public string Student { get; set; }
+        public string Title { get; set; }
+        public string Supervisor { get; set; }
+        public string Reviewer { get; set; }
+        public string Chairperson { get; set; }
+    }
+
+    public FullDefenseInfo GetFullDefenseInfo(int aId, int bId, int chairPersonId)
+    {
+        var aName = _persons.First(x => x.Value == aId).Key;
+        var bName = _persons.First(x => x.Value == bId).Key;
+        var partialDefenseInfo = _defenseInfos.FirstOrDefault(x => 
+            (x.SupervisorId == aId && x.ReviewerId == bId) ||
+            (x.SupervisorId == bId && x.ReviewerId == aId));
+
+        if (partialDefenseInfo is null)
+        {
+            throw new UserFriendlyException(
+                "No defense with id combination " + aName + " " + bName,
+                "Nie ma obrony dla kombinacji id " + aName + " " + bName
+            );
+        }
+
+        var defaultOrder = partialDefenseInfo.SupervisorId == aId;
+
+        _defenseInfos.Remove(partialDefenseInfo);
+
+        return new FullDefenseInfo(
+            partialDefenseInfo.Student,
+            partialDefenseInfo.Title,
+            defaultOrder ? aName : bName,
+            defaultOrder ? bName : aName,
+            _persons.First(x => x.Value == chairPersonId).Key
+        );
     }
 }
