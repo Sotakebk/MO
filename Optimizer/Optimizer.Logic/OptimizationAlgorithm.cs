@@ -22,17 +22,13 @@ public class OptimizationAlgorithm
 
     public CancellationToken CancellationToken => _cts.Token;
 
-    public IOptimizerStateDetails<Work.ChairPersonOptimization.OptimizerOutput>? ChairPersonOptimizerStateDetails
-    {
-        get;
-        set;
-    }
+    public delegate void BetterSolutionFoundEvent(object sender, Work.AssignmentOptimization.OptimizerOutput newResult);
 
-    public IOptimizerStateDetails<Work.AssignmentOptimization.OptimizerOutput>? AssignmentOptimizerStateDetails
-    {
-        get;
-        set;
-    }
+    public event BetterSolutionFoundEvent OnBetterSolutionFound;
+
+    public IOptimizerStateDetails<Work.ChairPersonOptimization.OptimizerOutput>? ChairPersonOptimizerStateDetails { get; set; }
+
+    public IOptimizerStateDetails<Work.AssignmentOptimization.OptimizerOutput>? AssignmentOptimizerStateDetails { get; set; }
 
     public OptimizationAlgorithmState State { get; private set; } = OptimizationAlgorithmState.Starting;
 
@@ -91,12 +87,9 @@ public class OptimizationAlgorithm
         var firstOptimizer = new ChairPersonOptimizer(input, cancellationTokenSource.Token);
         ChairPersonOptimizerStateDetails = firstOptimizer.StateDetails;
         State = OptimizationAlgorithmState.ChairPersonOptimization;
-        
+
         // immediately stop after finding the first solution
-        ChairPersonOptimizerStateDetails.OnBetterSolutionFound += (_, _) =>
-        {
-            cancellationTokenSource.Cancel();
-        };
+        ChairPersonOptimizerStateDetails.OnBetterSolutionFound += (_, _) => { cancellationTokenSource.Cancel(); };
         firstOptimizer.Optimize();
 
         if (firstOptimizer.StateDetails.Result == null)
@@ -107,9 +100,9 @@ public class OptimizationAlgorithm
 
         var secondOptimizer = new AssignmentOptimizer(input, firstOptimizer.StateDetails.Result, _cts.Token);
         AssignmentOptimizerStateDetails = secondOptimizer.StateDetails;
+        AssignmentOptimizerStateDetails.OnBetterSolutionFound += (_, sol) => { OnBetterSolutionFound.Invoke(this, sol); };
         State = OptimizationAlgorithmState.AssignmentOptimization;
         secondOptimizer.Optimize();
-
         State = OptimizationAlgorithmState.Done;
     }
 
