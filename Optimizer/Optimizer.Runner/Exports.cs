@@ -81,11 +81,12 @@ public static class Exports
 
                     if (debug)
                     {
+                        ws.Cells[currentRow + subCurrentRow, roomIndex * 6 + 2].Style.Fill.SetBackground(colorPalette[assignment.ChairPersonId]);
+                        
                         if (assignment.A.HasValue)
-                            ws.Cells[currentRow + subCurrentRow, roomIndex * 6 + 1].Style.Fill.SetBackground(colorPalette[assignment.A.Value]);
+                            ws.Cells[currentRow + subCurrentRow, roomIndex * 6 + 3].Style.Fill.SetBackground(colorPalette[assignment.A.Value]);
                         if (assignment.B.HasValue)
-                            ws.Cells[currentRow + subCurrentRow, roomIndex * 6 + 2].Style.Fill.SetBackground(colorPalette[assignment.B.Value]);
-                        ws.Cells[currentRow + subCurrentRow, roomIndex * 6 + 3].Style.Fill.SetBackground(colorPalette[assignment.ChairPersonId]);
+                            ws.Cells[currentRow + subCurrentRow, roomIndex * 6 + 4].Style.Fill.SetBackground(colorPalette[assignment.B.Value]);
                     }
 
                     subCurrentRow++;
