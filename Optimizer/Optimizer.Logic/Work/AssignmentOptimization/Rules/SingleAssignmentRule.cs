@@ -8,6 +8,22 @@ internal static class SingleAssignmentRule
 
         for (var i = 0; i < day.Classrooms.Length; i++)
         {
+            // check collision against preference A
+            if (tInput
+                    .Days[action.SlotId.Day]
+                    .Classrooms[i]
+                    .Slots[action.SlotId.Slot]
+                    .Preferences[action.A] == PreferenceType.NotAllowed)
+                return false;
+
+            // check collision against preference B
+            if (tInput
+                    .Days[action.SlotId.Day]
+                    .Classrooms[i]
+                    .Slots[action.SlotId.Slot]
+                    .Preferences[action.B] == PreferenceType.NotAllowed)
+                return false;
+
             // check collision against chairperson
             var classroom = tInput.Days[action.SlotId.Day].Classrooms[i];
             if (classroom.Slots.Length > action.SlotId.Slot) // this slot exists in the classroom
@@ -38,6 +54,6 @@ internal static class SingleAssignmentRule
         var b2 = slot.B;
 
         return a1 == a2 || a1 == b2
-               || b1 == a2 || b1 == b2;
+                        || b1 == a2 || b1 == b2;
     }
 }
