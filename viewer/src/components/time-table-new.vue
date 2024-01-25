@@ -5,6 +5,15 @@
         <v-col cols="auto" style="max-height: 98vh">
           <v-row :dense="true">
             <v-col>
+              <v-btn-toggle v-model="state" dense mandatory color="primary">
+                <v-btn small v-bind:key="State.Schedule"> Sloty </v-btn>
+                <v-btn small v-bind:key="State.Absences"> Nieobecności </v-btn>
+                <v-btn small v-bind:key="State.Assignments"> Obrony </v-btn>
+              </v-btn-toggle>
+            </v-col>
+          </v-row>
+          <v-row :dense="true">
+            <v-col>
               <h2>Obrony:</h2>
             </v-col>
           </v-row>
@@ -84,7 +93,7 @@
                             {{ getTime(index) }}
                           </span>
                         </v-col>
-                        <v-col>
+                        <v-col v-if="state === State.Schedule">
                           <span class="text-body-2">
                             Przypisz do obron w bloku:
                           </span>
@@ -105,6 +114,25 @@
                       </v-row>
                     </template>
                     <ScheduleEntry
+                      v-if="state === State.Assignments"
+                      :item="slot"
+                      :showChairperson="
+                        index == 0 || index % blockLength == 0
+                          ? true
+                          : slot.chairPerson !=
+                            room.slots[index - 1].chairPerson
+                      "
+                      :selected="
+                        selected &&
+                        selected[0] === dayIndex &&
+                        selected[1] === roomIndex &&
+                        selected[2] === index
+                      "
+                      @click="handleItemClick([dayIndex, roomIndex, index])"
+                    />
+                    <ScheduleBlock
+                      v-else
+                      :time="getTime(index)"
                       :item="slot"
                       :showChairperson="
                         index == 0 || index % blockLength == 0
@@ -122,7 +150,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row :dense="true">
+                <v-row v-if="state === State.Schedule" :dense="true">
                   <v-col>
                     <v-btn
                       @click="addSlot(dayIndex, roomIndex)"
@@ -135,7 +163,7 @@
                   </v-col>
                 </v-row>
               </v-col>
-              <v-col cols="auto">
+              <v-col v-if="state === State.Schedule" cols="auto">
                 <v-btn
                   @click="addRoom(dayIndex)"
                   height="88vh"
@@ -154,7 +182,7 @@
               </v-col>
             </v-row>
           </v-col>
-          <v-col cols="auto">
+          <v-col v-if="state === State.Schedule" cols="auto">
             <v-btn
               @click="addDay()"
               height="92vh"
@@ -167,7 +195,8 @@
                 position: sticky;
                 top: 0;
               "
-              >Dodaj dzień
+            >
+              Dodaj dzień
             </v-btn>
           </v-col>
         </v-col>
@@ -182,6 +211,13 @@ import ScheduleEntry from "@/components/schedule-slot.vue";
 import { Day, Entry, Room, Slot } from "@/types/data-types";
 import { fakerPL } from "@faker-js/faker";
 import AutocompleteSelect from "@/components/autocomplete-select.vue";
+import ScheduleBlock from "@/components/schedule-block.vue";
+
+const enum State {
+  Schedule,
+  Absences,
+  Assignments,
+}
 
 const props = defineProps({
   entries: {
@@ -202,15 +238,24 @@ const entriesLeft = ref([] as Slot[]);
 
 const days = ref([] as Day[]);
 
+const state = ref(State.Assignments);
+
 onMounted(() => {
-  addDay();
+  for (let dayNo = 0; dayNo < 3; dayNo++) {
+    addDay();
+    for (let roomNo = 0; roomNo < 2; roomNo++) {
+      if (roomNo != 0) addRoom(dayNo);
+      for (let slotNo = 0; slotNo < 16; slotNo++) {
+        if (slotNo != 0) addSlot(dayNo, roomNo);
+      }
+    }
+  }
 
   nextTick(() => {
     const outsideSlots = [] as Slot[];
     for (const entry of props.entries) {
       outsideSlots.push(new Slot(null, entry));
     }
-
     entriesLeft.value = outsideSlots;
   });
 });

@@ -1,5 +1,4 @@
 <template>
-  <!--  <TimeTable :entries="entries" :slots="slots" />-->
   <TimeTableNew :entries="entries" :chairpersons="chairpersons" />
 </template>
 
