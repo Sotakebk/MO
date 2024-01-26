@@ -60,9 +60,9 @@ public class OptimizationAlgorithm
 
     public static OptimizationAlgorithm Optimize(Input input, CancellationToken? cancellationToken, ILoggerFactory? loggerFactory = null)
     {
-        var (passesValidation, validationMessage) = PassesValidation(input);
+        var (passesValidation, validationMessageEN, validationMessagePL) = PassesValidation(input);
         if (!passesValidation)
-            throw new($"Validation failed ({validationMessage})");
+            throw new UserFriendlyException($"Validation failed ({validationMessageEN})", validationMessagePL ?? "Wewnętrzny błąd");
 
         var token = cancellationToken ?? CancellationToken.None;
         var factory = loggerFactory ?? new NullLoggerFactory();
@@ -106,7 +106,7 @@ public class OptimizationAlgorithm
         State = OptimizationAlgorithmState.Done;
     }
 
-    private static (bool passed, string? message) PassesValidation(Input input)
+    private static (bool passed, string? messageEN, string? messagePL) PassesValidation(Input input)
     {
         // assert that person IDs are continuous, and start at 0
         var peopleIds = input.AvailableChairPersonIds
@@ -119,22 +119,22 @@ public class OptimizationAlgorithm
         var count = peopleIds.Count();
 
         if (min != 0)
-            return (false, $"min person id != 0 (is: {min})");
+            return (false, $"min person id != 0 (is: {min})", null);
 
         if (max != count - 1)
-            return (false, $"max person id != count + 1 (is: {max})");
+            return (false, $"max person id != count + 1 (is: {max})", null);
 
         // assert that no defense points to same two people
         var samePersonPair = input.DefensesToAssign.FirstOrDefault(d => d.PromoterId == d.ReviewerId);
         if (samePersonPair != null)
-            return (false, $"defense promoterId == reviewerId (personId: {samePersonPair.PromoterId})");
+            return (false, $"defense promoterId == reviewerId (personId: {samePersonPair.PromoterId})", $"Jedna z obron ma tego samego promotora i recenzenta");
 
         // assert that there are enough slots
         var slotsSum = input.Days.Sum(d => d.Classrooms.Sum(c => c.InputSlots.Length));
         var defenses = input.DefensesToAssign.Sum(d => d.TotalCount);
         if (slotsSum < defenses)
-            return (false, $"not enough slots ({slotsSum}) for defenses ({defenses})");
+            return (false, $"not enough slots ({slotsSum}) for defenses ({defenses})", $"Niewystarczająca liczba slotów: ({slotsSum}), liczba obron: ({defenses})");
 
-        return (true, null);
+        return (true, null, null);
     }
 }

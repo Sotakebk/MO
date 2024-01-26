@@ -1,6 +1,6 @@
-﻿namespace Optimizer.Runner;
+﻿namespace Optimizer.Logic;
 
-class UserFriendlyException : Exception
+public class UserFriendlyException : Exception
 {
     // ReSharper disable once InconsistentNaming
     public string MessagePL { get; }
