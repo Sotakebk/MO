@@ -6,28 +6,28 @@ internal static class SingleAssignmentRule
     {
         var day = state.Days[action.SlotId.Day];
 
-        for (var i = 0; i < day.Classrooms.Length; i++)
+        for (var roomId = 0; roomId < day.Classrooms.Length; roomId++)
         {
-            // check collision against preference A
-            if (tInput
-                    .Days[action.SlotId.Day]
-                    .Classrooms[i]
-                    .Slots[action.SlotId.Slot]
-                    .Preferences[action.A] == PreferenceType.NotAllowed)
-                return false;
-
-            // check collision against preference B
-            if (tInput
-                    .Days[action.SlotId.Day]
-                    .Classrooms[i]
-                    .Slots[action.SlotId.Slot]
-                    .Preferences[action.B] == PreferenceType.NotAllowed)
-                return false;
-
-            // check collision against chairperson
-            var classroom = tInput.Days[action.SlotId.Day].Classrooms[i];
+            var classroom = tInput.Days[action.SlotId.Day].Classrooms[roomId];
             if (classroom.Slots.Length > action.SlotId.Slot) // this slot exists in the classroom
             {
+                // check collision against preference A
+                if (tInput
+                        .Days[action.SlotId.Day]
+                        .Classrooms[roomId]
+                        .Slots[action.SlotId.Slot]
+                        .Preferences[action.A] == PreferenceType.NotAllowed)
+                    return false;
+
+                // check collision against preference B
+                if (tInput
+                        .Days[action.SlotId.Day]
+                        .Classrooms[roomId]
+                        .Slots[action.SlotId.Slot]
+                        .Preferences[action.B] == PreferenceType.NotAllowed)
+                    return false;
+
+                // check collision against chairperson
                 var chairPersonId = classroom
                     .Slots[action.SlotId.Slot]
                     .ChairPersonId;
@@ -36,7 +36,7 @@ internal static class SingleAssignmentRule
                     return false;
 
                 // check collision against what is assigned
-                var assignment = day.Classrooms[i].Slots[action.SlotId.Slot];
+                var assignment = day.Classrooms[roomId].Slots[action.SlotId.Slot];
                 if (assignment.HasValuesSet() && HasCollision(action, assignment))
                     return false;
             }
