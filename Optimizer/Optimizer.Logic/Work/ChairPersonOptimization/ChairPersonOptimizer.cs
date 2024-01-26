@@ -109,17 +109,16 @@ internal sealed class ChairPersonOptimizer : BaseOptimizer<OptimizerState, Optim
 
     protected override (int depth, float proportion, float persistence) GetSearchingStrategyForState(OptimizerState state)
     {
-        var percentage = Math.Clamp(((1 + state.Depth) / (float)state.MaxDepth), 0, 1);
-
-        // var proportion = Math.Clamp(((1 + state.Depth) / (float)state.MaxDepth), 0, 1);
-        // var persistence = proportion;
-        // var depth = int.MaxValue;
-        // return (depth, proportion, persistence);
-        return (0, ExponentialPercentage(percentage), ExponentialPercentage(percentage));
+        var percentage = state.Depth + 1.0f / state.MaxDepth;
+        var exp = ExponentialPercentage(percentage, 0.001f);
+        var depth = (int)(1.0f * state.MaxDepth * exp);
+        var proportion = exp;
+        var persistence = exp;
+        return (depth, proportion, persistence);
     }
 
-    float ExponentialPercentage(float percentage, float a = 0.01f, float t = 1.0f)
+    float ExponentialPercentage(float percentage, float a = 0.01f)
     {
-        return MathF.Pow(a * (1.0f / a), percentage * t);
+        return a * MathF.Pow(a * (1.0f / a), Math.Clamp(percentage, 0f, 1f));
     }
 }
