@@ -3,10 +3,10 @@
 class UserFriendlyException : Exception
 {
     // ReSharper disable once InconsistentNaming
-    private string ExceptionPL { get; set; }
+    public string MessagePL { get; }
 
     public UserFriendlyException(string exceptionEn, string exceptionPl) : base(exceptionEn)
     {
-        ExceptionPL = exceptionPl;
+        MessagePL = exceptionPl;
     }
 }
