@@ -33,7 +33,6 @@ public class Solution
             AvailableChairPersonIds = _chairPersons.ToArray(),
             // DefensesToAssign
             DefensesToAssign = _defenseInfos
-                .Take(84) // TODO: Remove
                 .Select(pair => (reviewer: pair.ReviewerId, supervisor: pair.SupervisorId))
                 .GroupBy(grouped => grouped)
                 .Select(group => new InputCombination

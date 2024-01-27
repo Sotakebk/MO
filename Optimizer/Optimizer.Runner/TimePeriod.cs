@@ -1,4 +1,6 @@
-﻿namespace Optimizer.Runner;
+﻿using Optimizer.Logic;
+
+namespace Optimizer.Runner;
 
 public class TimePeriod
 {
@@ -29,6 +31,6 @@ public class TimePeriod
             return new TimePeriod(startTime, endTime);
         }
 
-        throw new UserFriendlyException("Could not parse format", $"Nie udało się odczytać przedziału czasu: {input}, sprawdź format");
+        throw new UserFriendlyException($"Could not parse format: {input}", $"Nie udało się odczytać przedziału czasu: {input}, sprawdź format");
     }
 }

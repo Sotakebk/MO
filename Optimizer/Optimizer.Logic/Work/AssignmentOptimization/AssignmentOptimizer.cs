@@ -159,7 +159,7 @@ internal sealed class AssignmentOptimizer : BaseOptimizer<OptimizerState, Optimi
 
 
         var percentage = state.Depth + 1.0f / state.MaxDepth;
-        var exp = ExponentialPercentage(percentage, 0.0001f);
+        var exp = ExponentialPercentage(percentage, 0.00001f);
         var depth = (int)(1.0f * state.MaxDepth * exp);
         var proportion = exp;
         var persistence = exp;

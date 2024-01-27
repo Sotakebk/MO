@@ -8,11 +8,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ceffbbd7-80ea-4807-a200-052a40c4561c" name="Changes" comment="Remove IDE settings">
+    <list default="true" id="ceffbbd7-80ea-4807-a200-052a40c4561c" name="Changes" comment="User friendly error fixex">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Optimizer/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Optimizer/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Optimizer.Runner/ConsoleHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/ConsoleHelper.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Optimizer.Runner/Exports.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/Exports.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Optimizer.Logic/Work/AssignmentOptimization/AssignmentOptimizer.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Logic/Work/AssignmentOptimization/AssignmentOptimizer.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Optimizer.Runner/Imports.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/Imports.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Optimizer.Runner/Input/Obrony.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/Input/Obrony.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Optimizer.Runner/Input/Sale.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/Input/Sale.xlsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Optimizer.Runner/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Optimizer.Runner/Solution.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/Solution.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Optimizer.Runner/TimePeriod.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Optimizer.Runner/TimePeriod.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,13 +32,16 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$USER_HOME$/AppData/Local/Symbols/src/dotnet/runtime/3f73a2f186e08c905aba441ea5545295ca261730/src/libraries/System.Collections/src/System/Collections/Generic/Stack.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$USER_HOME$/AppData/Local/Symbols/src/dotnet/runtime/e7b8488daf32c7a607632ec4be605ba3ccf171a7/src/libraries/System.Collections.Concurrent/src/System/Collections/Concurrent/ConcurrentDictionary.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/36f2e81975c64fee9fd352c3a469c18d35f000/2f/80736e23/ExcelWorksheet.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/36f2e81975c64fee9fd352c3a469c18d35f000/db/2775a6ab/LicenseContext.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/a2097cda1288423ca5759d4ef39ed843a24aa0/5b/59b3218d/IEnumerable`1.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/c827b66dbc3247e195f9ccba8a8370c3836b0/d2/67041aaa/Enumerable.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/1f371daa9d6feabe01612a3aa37cb2c6c80a984cb4efc21d718f7f8c9e0ca/Exception.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/5f95f0ed1866fedd57b8fb7677a74d4c02ceead27f8a696535e6214685fb7/Array.CoreCLR.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/6879c9ed20391a5ccfea363be5964fbcfe4f1dfde9558aa84b36df6b6ec92c6/List.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/794bcfedceb3c6d957fbddf0e1c9a04afca77f9b5470c6859466cfba35e1ddb1/Task.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/83a6026a3743d5193ae2ff787c3727607dabf7d04e72a3355252fe116066/Collection.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/85448f861b1cb95910693f28a5ce3363967c79953b460b176d97298ae5ed0/Nullable.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/a2097cda1288423ca5759d4ef39ed843a24aa0/_13f9f/IList.cs" root0="SKIP_HIGHLIGHTING" />
@@ -43,7 +50,22 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/ec11765cbb8c53eff7ee868d6884fa5d48e1b543926061744e7947896e88422/CancellationToken.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/efd3e9c4749621d4a53b45d7117d2a581e02a265c444a040f1387a155db/Dictionary.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/f9749fe3576a687c3c42f3794cefe8f8d91e62f939c66c0a32dbb3f74255/ManualResetEventSlim.cs" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Logic/Work/Heuristics/GeneralPeopleHeuristic.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Logic/OptimizationAlgorithm.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Logic/Work/AssignmentOptimization/AssignmentOptimizer.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Logic/Work/AssignmentOptimization/AssignmentOptimizer.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Logic/Work/AssignmentOptimization/AssignmentOptimizer.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Logic/Work/AssignmentOptimization/AssignmentOptimizer.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Optimizer.Logic/Work/AssignmentOptimization/Rules/SingleAssignmentRule.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Optimizer.Logic/Work/AssignmentOptimization/TransformedInput.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Optimizer.Logic/Work/ChairPersonOptimization/Rules/NoCollisionRule.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Optimizer.Logic/Work/ChairPersonOptimization/TransformedInput.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Runner/Imports.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Runner/Program.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Runner/Program.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Optimizer.Runner/Solution.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Runner/Solution.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://F:/PK_SEM_8/MO/projekt-repo/Optimizer/Optimizer.Runner/TimePeriod.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Optimizer.Tests/TimePeriodEnumeratorTests.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProjectColorInfo">{
@@ -55,31 +77,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    ".NET Project.Runner.executor": "Run",
-    "Publish to folder.Publish.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "XThreadsFramesViewSplitterKey": "0.37151107",
-    "git-widget-placeholder": "master",
-    "ignore.virus.scanning.warn.message": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "configurable.group.editor",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;.NET Project.Runner.executor&quot;: &quot;Run&quot;,
+    &quot;Publish to folder.Publish.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.group.editor&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "rider.external.source.directories": [
-      "C:\\Users\\janba\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\DecompilerCache",
-      "C:\\Users\\janba\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\SourcesCache",
-      "C:\\Users\\janba\\AppData\\Local\\Symbols\\src"
+  &quot;keyToStringList&quot;: {
+    &quot;rider.external.source.directories&quot;: [
+      &quot;C:\\Users\\janba\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\DecompilerCache&quot;,
+      &quot;C:\\Users\\janba\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\SourcesCache&quot;,
+      &quot;C:\\Users\\janba\\AppData\\Local\\Symbols\\src&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected=".NET Project.Runner">
     <configuration name="Publish" type="DotNetFolderPublish" factoryName="Publish to folder">
       <riderPublish configuration="Release" platform="Any CPU" produce_single_file="true" runtime="win-x64" self_contained="true" target_folder="$PROJECT_DIR$/publish" target_framework="net7.0" uuid_high="8277450186355067260" uuid_low="-8335618797996967329" />
@@ -126,6 +147,9 @@
       <workItem from="1704910946146" duration="1992000" />
       <workItem from="1704986259721" duration="143000" />
       <workItem from="1704986886096" duration="11686000" />
+      <workItem from="1706218752863" duration="633000" />
+      <workItem from="1706260101584" duration="10710000" />
+      <workItem from="1706279306529" duration="2479000" />
     </task>
     <task id="LOCAL-00001" summary="Refactor">
       <option name="closed" value="true" />
@@ -223,7 +247,47 @@
       <option name="project" value="LOCAL" />
       <updated>1706215401544</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Easter egg">
+      <option name="closed" value="true" />
+      <created>1706217858897</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1706217858897</updated>
+    </task>
+    <task id="LOCAL-00014" summary="User Friendly Exception">
+      <option name="closed" value="true" />
+      <created>1706274528138</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1706274528138</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Exponential depth serach fix">
+      <option name="closed" value="true" />
+      <created>1706274615303</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1706274615303</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Action collision check fix">
+      <option name="closed" value="true" />
+      <created>1706274937599</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1706274937599</updated>
+    </task>
+    <task id="LOCAL-00017" summary="User friendly error fixex">
+      <option name="closed" value="true" />
+      <created>1706279762587</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1706279762587</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -253,7 +317,12 @@
     <MESSAGE value="Remove unecessary assignemnts" />
     <MESSAGE value="Export methods extract, xlsx export with colors" />
     <MESSAGE value="Remove IDE settings" />
-    <option name="LAST_COMMIT_MESSAGE" value="Remove IDE settings" />
+    <MESSAGE value="Easter egg" />
+    <MESSAGE value="User Friendly Exception" />
+    <MESSAGE value="Exponential depth serach fix" />
+    <MESSAGE value="Action collision check fix" />
+    <MESSAGE value="User friendly error fixex" />
+    <option name="LAST_COMMIT_MESSAGE" value="User friendly error fixex" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -263,6 +332,19 @@
           <line>119</line>
           <properties documentPath="F:\PK_SEM_8\MO\projekt-repo\Optimizer\Optimizer.Logic\Work\Optimizer.cs" initialLine="119" containingFunctionPresentation="Method 'CreateSolutionFromPartialSolution'" />
           <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DotNet Breakpoints">
+          <url>file://$PROJECT_DIR$/Optimizer.Logic/Work/ChairPersonOptimization/ChairPersonOptimizer.cs</url>
+          <line>116</line>
+          <properties documentPath="F:\PK_SEM_8\MO\projekt-repo\Optimizer\Optimizer.Logic\Work\ChairPersonOptimization\ChairPersonOptimizer.cs" initialLine="119" containingFunctionPresentation="Method 'GetSearchingStrategyForState'">
+            <startOffsets>
+              <option value="3862" />
+            </startOffsets>
+            <endOffsets>
+              <option value="3902" />
+            </endOffsets>
+          </properties>
+          <option name="timeStamp" value="7" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

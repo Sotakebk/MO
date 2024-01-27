@@ -38,9 +38,6 @@ public static class Imports
                 var supervisor = worksheet.Cells[row, 7].Value?.ToString();
                 var reviewer = worksheet.Cells[row, 8].Value?.ToString();
 
-                if (string.Equals(worksheet.Cells[row, 4].Value.ToString(), "II stopień", StringComparison.InvariantCultureIgnoreCase))
-                    continue;
-
                 solution.AddDefenseInfo($"{firstName} {lastName}", title!, supervisor!, reviewer!);
             }
         }

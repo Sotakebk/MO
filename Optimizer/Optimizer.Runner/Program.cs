@@ -48,7 +48,7 @@ try
 // var date = new DateOnly(2024, 1, 29);
     var input = solution.GetOptimizerInput(date);
 
-    var timeLimit = TimeSpan.FromSeconds(20);
+    var timeLimit = TimeSpan.FromSeconds(30);
 
     AnsiConsole.MarkupLine($"Algorytm zakończy swoją pracę za: [bold]{timeLimit.TotalSeconds}sekund[/]");
     AnsiConsole.MarkupLine("Wcześniejsze wyłączenie po kliknięciu: [bold]CTRL+C[/]");
@@ -92,6 +92,7 @@ try
             void LogInfo()
             {
                 var state = GetActiveOptimizerStateDetails();
+                // AnsiConsole.MarkupLine($"Domain: {state?.PercentDomainSeen:F10}%");
                 logger.LogInformation(
                     $"ops: {state?.OperationsDone:D10}, evs: {state?.Evaluations}, dead-ends: {state?.DeadEnds}, partial score: {state?.PartialScore}, best score:{state?.ResultScore:F5}, depth: {state?.CurrentDepth} ({(100f * state?.CurrentDepth / state?.MaxDepth):F}%, level: {(100 * state?.CurrentDepthCompleteness):F}%), pds: {state?.PercentDomainSeen:F5}%");
             }
@@ -133,6 +134,7 @@ try
                 else
                 {
                     AnsiConsole.MarkupLine("Nie znaleziono rozwiązania");
+                    AnsiConsole.MarkupLine("Jeżeli powtarza się to przy kilku uruchomieniach, zwiększ liczbę dni i/lub sprawdź ilość nieobecności");
                 }
             }
         });
